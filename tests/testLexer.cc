@@ -33,6 +33,8 @@ int main(const int argc, const char** argv) {
         if (token.getType() == LEX::TokenType::BAD) {
             // report error
             return -4;
+        } else if (token.getType() == LEX::TokenType::FEND) {
+            return 0;
         }
     }
     return 0;

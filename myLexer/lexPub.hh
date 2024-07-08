@@ -23,35 +23,6 @@ namespace LEX {
  * COMMENT2     := \/\*[:]*\*\/
  */
 enum class TokenType {
-    // type
-    VOID,       
-    BOOL,
-    CHAR,
-    SHORT,
-    INT,        
-    LONG,
-    FLOAT,
-    DOUBLE,
-    STRUCT,
-
-    // OPERAND
-    ID,
-    INTEGERLITERAL,
-    FLOATLITERAL,
-    STRLITERAL,
-
-    // operators
-    ADD,
-    MINUS,
-    MULTI,
-    DIV,
-    EQUAL,
-    GREATER,
-    LESS,
-    DOT,
-    REF,
-    POINTER,
-
     // keywords
     IF,
     ELSE,
@@ -62,6 +33,44 @@ enum class TokenType {
     RETURN,
     CONST,
     TYPEDEF,
+    INCLUDE,
+    VOID,       
+    BOOL,
+    CHAR,
+    SHORT,
+    INT,        
+    LONG,
+    FLOAT,
+    DOUBLE,
+    STRUCT,
+
+    // operands 
+    ID,
+    INTEGERLITERAL,
+    FLOATLITERAL,
+    STRLITERAL,
+    TRUE,
+    FALSE,
+
+    // operators
+    ADD,
+    MINUS,
+    MULTI,
+    DIV,
+    EQUAL,
+    GREATER,
+    LESS,
+    DOT,
+    POINTER,
+
+    LOGAND,
+    REF,    // BITAND,
+
+    LOGOR,
+    BITOR,
+    
+    LOGNOT,
+    BITNOT,
 
     // punctuation
     PARENTHESESL,
@@ -72,9 +81,11 @@ enum class TokenType {
     BRACER,
     COMMA,
     SEMICOLON,
+    SHARP,
 
     // special
     BAD,
+    FEND,
 };
 
 enum class LexState {
@@ -121,7 +132,18 @@ enum class LexState {
     DOT,
     COMMA,
     SEMICOLON,
-    REF,
+    SHARP,
+
+    AND,
+    LOGAND,
+    REF,    // BITAND,
+
+    OR,
+    LOGOR,
+    BITOR,
+    
+    LOGNOT,
+    BITNOT,
 
     INVALID
 };
@@ -250,6 +272,10 @@ private:
     void    atCommPhase3(char);
     
     void    atCommPhase4(char);
+
+    void    atAnd(char);
+
+    void    atOr(char);
 
     void    errorHandler();
 
