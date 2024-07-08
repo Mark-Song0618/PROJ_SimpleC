@@ -64,6 +64,8 @@ Token::dump() {
     case TokenType::CONST:
         rt += "CONST";
         break;
+    case TokenType::TYPEDEF:
+        rt += "TYPEDEF";
     case TokenType::ID:
         rt += "ID. Value:";
         rt += std::get<std::string>(_value);
@@ -87,6 +89,9 @@ Token::dump() {
         break;
     case TokenType::MINUS:
         rt += "MINUS";
+        break;
+    case TokenType::POINTER:
+        rt += "POINTER";
         break;
     case TokenType::MULTI:
         rt += "MULTI";
@@ -159,6 +164,111 @@ Token::dump() {
     return std::move(rt);
 }
 
+std::map<std::string, TokenType>
+MyLexer::_kwStr2Type = 
+{
+    {"void",        TokenType::VOID},
+    {"bool",        TokenType::BOOL},
+    {"char",        TokenType::CHAR},
+    {"short",       TokenType::SHORT},
+    {"int",         TokenType::INT},
+    {"long",        TokenType::LONG},
+    {"float",       TokenType::FLOAT},
+    {"double",      TokenType::DOUBLE},
+    {"struct",      TokenType::STRUCT},
+    {"const",       TokenType::CONST},
+    {"typedef",     TokenType::TYPEDEF},
+    {"if",          TokenType::IF},
+    {"else",        TokenType::ELSE},
+    {"while",       TokenType::WHILE},
+    {"for",         TokenType::FOR},
+    {"break",       TokenType::BREAK},
+    {"continue",    TokenType::DOUBLE},
+    {"return",      TokenType::RETURN},
+};
+
+std::map<TokenType, std::string>
+MyLexer::_kwType2Str = 
+{
+    {TokenType::VOID,       "void"},
+    {TokenType::BOOL,       "bool"},
+    {TokenType::CHAR,       "char"},
+    {TokenType::SHORT,      "short"},
+    {TokenType::INT,        "int"},
+    {TokenType::LONG,       "long"},
+    {TokenType::FLOAT,      "float"},
+    {TokenType::DOUBLE,     "double"},
+    {TokenType::STRUCT,     "struct"},
+    {TokenType::CONST,      "const"},
+    {TokenType::TYPEDEF,    "typedef"},
+    {TokenType::IF,         "if"},
+    {TokenType::ELSE,       "else"},
+    {TokenType::WHILE,      "while"},
+    {TokenType::FOR,        "for"},
+    {TokenType::BREAK,      "break"},
+    {TokenType::CONTINUE,   "continue"},
+    {TokenType::RETURN,     "return"},
+};
+
+std::map<LexState, TokenType>   
+MyLexer::_Lex2Token =
+{
+    // OPERAND
+    {LexState::ID,              TokenType::ID},
+    {LexState::INT,             TokenType::INTEGERLITERAL},
+    {LexState::FLOAT,           TokenType::FLOATLITERAL},
+    {LexState::STR,             TokenType::STRLITERAL},
+    
+       // operators
+    {LexState::ADD,             TokenType::ADD},
+    {LexState::MINUS,           TokenType::MINUS},
+    {LexState::MULTI,           TokenType::MULTI},
+    {LexState::DIV,             TokenType::DIV},
+    {LexState::EQUAL,           TokenType::EQUAL},
+    {LexState::GREATER,         TokenType::GREATER},
+    {LexState::LESS,            TokenType::LESS},
+    {LexState::DOT,             TokenType::DOT},
+    {LexState::REF,             TokenType::REF},
+    {LexState::POINTER,         TokenType::POINTER},
+    
+       // punctuation
+    {LexState::PARENTHESESL,    TokenType::PARENTHESESL},
+    {LexState::PARENTHESESR,    TokenType::PARENTHESESR},
+    {LexState::BRACKETL,        TokenType::BRACKETL},
+    {LexState::BRACKETR,        TokenType::BRACKETR},
+    {LexState::BRACEL,          TokenType::BRACEL},
+    {LexState::BRACER,          TokenType::BRACER},
+    {LexState::COMMA,           TokenType::COMMA},
+    {LexState::SEMICOLON,       TokenType::SEMICOLON},
+};
+
+std::unordered_set<LexState> 
+MyLexer::_acceptable =
+{
+    LexState::INT,
+    LexState::FLOAT, 
+    LexState::STR,
+    LexState::ID,
+    LexState::ADD,
+    LexState::MINUS,
+    LexState::POINTER,
+    LexState::MULTI,
+    LexState::DIV,
+    LexState::EQUAL,
+    LexState::GREATER,
+    LexState::LESS,
+    LexState::PARENTHESESL,
+    LexState::PARENTHESESR,
+    LexState::BRACKETL,
+    LexState::BRACKETR,
+    LexState::BRACEL,
+    LexState::BRACER,
+    LexState::DOT,
+    LexState::COMMA,
+    LexState::SEMICOLON,
+    LexState::REF,
+};
+
 void
 MyLexer::initFsmHandlers()
 {
@@ -174,6 +284,8 @@ MyLexer::initFsmHandlers()
     
     addTransfunc(LexState::ID_PHASE1, std::bind(&MyLexer::atIDPhase1, this, std::placeholders::_1));
 
+    addTransfunc(LexState::MINUS_PHASE1, std::bind(&MyLexer::atMinusPhase1, this, std::placeholders::_1));
+
     addTransfunc(LexState::COMM_PHASE1, std::bind(&MyLexer::atCommPhase1, this, std::placeholders::_1));
     addTransfunc(LexState::COMM_PHASE2, std::bind(&MyLexer::atCommPhase2, this, std::placeholders::_1));
     addTransfunc(LexState::COMM_PHASE3, std::bind(&MyLexer::atCommPhase3, this, std::placeholders::_1));
@@ -181,27 +293,6 @@ MyLexer::initFsmHandlers()
     addTransfunc(LexState::INVALID, std::bind(&MyLexer::errorHandler, this));
 }
 
-void
-MyLexer::initKeywords()
-{
-    _keywordTab = 
-    {
-        {"void",        TokenType::VOID},
-        {"int",         TokenType::INT},
-        {"long",        TokenType::LONG},
-        {"float",       TokenType::FLOAT},
-        {"bool",        TokenType::BOOL},
-        {"struct",      TokenType::STRUCT},
-        {"const",       TokenType::CONST},
-        {"if",          TokenType::IF},
-        {"else",        TokenType::ELSE},
-        {"while",       TokenType::WHILE},
-        {"for",         TokenType::FOR},
-        {"break",       TokenType::BREAK},
-        {"continue",    TokenType::DOUBLE},
-        {"return",      TokenType::RETURN},
-    };
-}
 
 int
 MyLexer::scan(std::string filePath)
@@ -229,22 +320,22 @@ MyLexer::scan(std::string filePath)
 }
 
 int
-MyLexer::output(std::string outputFile = "")
+MyLexer::setOutput(std::string outputFile = "")
 {
     if (outputFile.empty()) {
         _output = stdout;
         return 0;
     } 
 
-    if (access(outputFile.c_str(), F_OK)) {
+    if (!access(outputFile.c_str(), F_OK)) {
         Msg::instance().warn(ERRTYPE::FILE_EXIST, "file exists. Might be overwritten.");
-        return -1;
     }
 
-    if (!(_output = fopen(outputFile.c_str(), "rw+"))) {
+    if (!(_output = fopen(outputFile.c_str(), "w+"))) {
         Msg::instance().error(ERRTYPE::FILE_NOT_WRITABLE, "cannot open file to write");
         return -1;
     }
+
     return 0;
 }
 
@@ -274,8 +365,11 @@ MyLexer::nextToken()
             reset();
         } else if (stateInvalid()) {
             errorHandler();
+            break;
         }
     }
+
+    return tk; // actually won't get there.
 }
 
 char 
@@ -283,7 +377,7 @@ MyLexer::getNextInput()
 {
     char c = fgetc(_input);
     if (c == '\n') {
-        _curr.carriageRetur();
+        _curr.carriageReturn();
     } else {
         _curr.moveLeft();
     }
@@ -301,32 +395,7 @@ MyLexer::toNextState(char c)
 bool
 MyLexer::stateAcceptable()
 {
-    static std::unordered_set<LexState> acceptable = 
-    {
-        LexState::START,
-        LexState::INT,
-        LexState::FLOAT, 
-        LexState::STR,
-        LexState::ID,
-        LexState::ADD,
-        LexState::MINUS,
-        LexState::MULTI,
-        LexState::DIV,
-        LexState::EQUAL,
-        LexState::GREATER,
-        LexState::LESS,
-        LexState::PARENTHESESL,
-        LexState::PARENTHESESR,
-        LexState::BRACKETL,
-        LexState::BRACKETR,
-        LexState::BRACEL,
-        LexState::BRACER,
-        LexState::DOT,
-        LexState::COMMA,
-        LexState::SEMICOLON,
-        LexState::REF,
-    };
-    return acceptable.find(_state) != acceptable.end();
+    return _acceptable.find(_state) != _acceptable.end();
 }
 
 bool
@@ -338,7 +407,9 @@ MyLexer::stateInvalid()
 bool
 MyLexer::stateIgnore()
 {
-    return _state == LexState::SPACEEND || _state == LexState::COMMENT;
+    return _state == LexState::START ||
+           _state == LexState::SPACEEND || 
+           _state == LexState::COMMENT;
 }
 
 Token
@@ -347,71 +418,34 @@ MyLexer::extractToken()
     Token tk;
     if (stateAcceptable()) {
         if (isKeyword(_cache)) {
-            tk = Token(_keywordTab[_cache], "", _tkStart);
+            tk = Token(_kwStr2Type[_cache], "", _tkStart);
         } else {
             switch (_state) {
             case LexState::INT:
-                tk = Token(TokenType::INT, _cache, _tkStart);
-                break;
             case LexState::FLOAT:
-                tk = Token(TokenType::FLOAT, _cache, _tkStart);
-                break;
             case LexState::STR:
-                tk = Token(TokenType::STRLITERAL, _cache, _tkStart);
-                break;
             case LexState::ID:
-                tk = Token(TokenType::ID, _cache, _tkStart);
+                tk = Token(_Lex2Token[_state], _cache, _tkStart);
                 break;
-            case LEX::LexState::ADD:
-                tk = Token(TokenType::ADD, "", _tkStart);
-                break;
-            case LEX::LexState::MINUS:
-                tk = Token(TokenType::MINUS, "", _tkStart);
-                break;
-            case LEX::LexState::MULTI:
-                tk = Token(TokenType::MULTI, "", _tkStart);
-                break;
-            case LEX::LexState::DIV:
-                tk = Token(TokenType::DIV, "", _tkStart);
-                break;
-            case LEX::LexState::EQUAL:
-                tk = Token(TokenType::EQUAL, "", _tkStart);
-                break;
-            case LEX::LexState::GREATER:
-                tk = Token(TokenType::GREATER, "", _tkStart);
-                break;
-            case LEX::LexState::LESS:
-                tk = Token(TokenType::LESS, "", _tkStart);
-                break;
-            case LEX::LexState::PARENTHESESL:
-                tk = Token(TokenType::PARENTHESESL, "", _tkStart);
-                break;
-            case LEX::LexState::PARENTHESESR:
-                tk = Token(TokenType::PARENTHESESR, "", _tkStart);
-                break;
-            case LEX::LexState::BRACKETL:
-                tk = Token(TokenType::BRACKETL, "", _tkStart);
-                break;
-            case LEX::LexState::BRACKETR:
-                tk = Token(TokenType::BRACKETR, "", _tkStart);
-                break;
-            case LEX::LexState::BRACEL:
-                tk = Token(TokenType::BRACEL, "", _tkStart);
-                break;
-            case LEX::LexState::BRACER:
-                tk = Token(TokenType::BRACER, "", _tkStart);
-                break;
-            case LEX::LexState::DOT:
-                tk = Token(TokenType::DOT, "", _tkStart);
-                break;
-            case LEX::LexState::COMMA:
-                tk = Token(TokenType::COMMA, "", _tkStart);
-                break;
-            case LEX::LexState::SEMICOLON:
-                tk = Token(TokenType::SEMICOLON, "", _tkStart);
-                break;
-            case LEX::LexState::REF:
-                tk = Token(TokenType::REF, "", _tkStart);
+            case LexState::ADD:
+            case LexState::MINUS:
+            case LexState::MULTI:
+            case LexState::POINTER:
+            case LexState::DIV:
+            case LexState::EQUAL:
+            case LexState::GREATER:
+            case LexState::LESS:
+            case LexState::PARENTHESESL:
+            case LexState::PARENTHESESR:
+            case LexState::BRACKETL:
+            case LexState::BRACKETR:
+            case LexState::BRACEL:
+            case LexState::BRACER:
+            case LexState::DOT:
+            case LexState::COMMA:
+            case LexState::SEMICOLON:
+            case LexState::REF:
+                tk = Token(_Lex2Token[_state], "", _tkStart);
                 break;
             defalse:
                 break;
@@ -495,7 +529,7 @@ MyLexer::isSplitter(char c)
 bool
 MyLexer::isKeyword(const std::string& word)
 {
-    if (_keywordTab.find(word) != _keywordTab.end()) {
+    if (_kwStr2Type.find(word) != _kwStr2Type.end()) {
         return true;
     }
     return false;
@@ -505,7 +539,7 @@ TokenType
 MyLexer::keyword(const std::string img)
 {
     if (isKeyword(img)) {
-        return _keywordTab[img];
+        return _kwStr2Type[img];
     } else {
         return {};
     }
@@ -530,7 +564,7 @@ MyLexer::atStart(char c)
     } else if (c == '+') {
         changeState(LexState::ADD);
     } else if (c == '-') {
-        changeState(LexState::MINUS);
+        changeState(LexState::MINUS_PHASE1);
     } else if (c == '*') {
         changeState(LexState::MULTI);
     } else if (c == '=') {
@@ -588,6 +622,17 @@ MyLexer::atIDPhase1(char c)
         absorb(c);
     }
 }
+    
+void
+MyLexer::atMinusPhase1(char c)
+{
+    if (c == '>') {
+        absorb(c);
+        changeState(LexState::POINTER);
+    } else {
+        changeState(LexState::MINUS);
+    }
+}
 
 void
 MyLexer::atStrPhase1(char c) {
@@ -620,6 +665,8 @@ MyLexer::atNumPhase2(char c) {
         absorb(c);
     } else if (isSplitter(c)) {
         changeState(LexState::INT);
+    } else if (isNum(c)) {
+        absorb(c);
     } else {
         changeState(LexState::INVALID);
         absorb(c);
@@ -687,7 +734,8 @@ MyLexer::errorHandler()
 {
 
     std::string msg;
-    msg += "Line: ";
+    msg += _cache;
+    msg += ". Line: ";
     msg += std::to_string(_curr.line());
     msg += ", Col: ";
     msg += std::to_string(_curr.column());

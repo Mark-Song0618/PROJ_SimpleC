@@ -4,12 +4,12 @@
 #include <stdio.h>
 #include <string>
 #include <map>
+#include <unordered_set>
 #include <variant>
 #include "../utils/Fsm.hh"
+
 namespace LEX {
 /*
- * VOID
- *
  * ID           := [_a-zA-Z][_a-zA-Z0-9]*
  *
  * STRLITERAL   := \"[:]\"
@@ -24,14 +24,15 @@ namespace LEX {
  */
 enum class TokenType {
     // type
-    VOID,       // void
-    INT,        // int
+    VOID,       
+    BOOL,
+    CHAR,
+    SHORT,
+    INT,        
     LONG,
     FLOAT,
     DOUBLE,
-    BOOL,
     STRUCT,
-    CONST,
 
     // OPERAND
     ID,
@@ -47,6 +48,9 @@ enum class TokenType {
     EQUAL,
     GREATER,
     LESS,
+    DOT,
+    REF,
+    POINTER,
 
     // keywords
     IF,
@@ -56,6 +60,8 @@ enum class TokenType {
     BREAK,
     CONTINUE,
     RETURN,
+    CONST,
+    TYPEDEF,
 
     // punctuation
     PARENTHESESL,
@@ -64,13 +70,10 @@ enum class TokenType {
     BRACKETR,
     BRACEL,
     BRACER,
-    DOT,
     COMMA,
     SEMICOLON,
-    REF,
 
     // special
-    FEOF,
     BAD,
 };
 
@@ -99,7 +102,11 @@ enum class LexState {
     COMMENT,
 
     ADD,
+
+    MINUS_PHASE1,
     MINUS,
+    POINTER,
+
     MULTI,
     DIV,
     EQUAL,
@@ -127,7 +134,7 @@ public:
 
     void        moveLeft() {++_col;}
 
-    void        carriageRetur() {_line++; _col = 0;}
+    void        carriageReturn() {_line++; _col = 0;}
 
     uint64_t    line() { return _line; }
 
@@ -147,6 +154,9 @@ public:
 
     TokenType           getType() {return _type;}
 
+    template<typename T>
+    T                   getValue() { return std::get<T>(_value); }
+
     std::string         dump();
 
 private:
@@ -159,7 +169,7 @@ private:
 
 class MyLexer final : public UTIL::FsmBase<LexState, char> {
 public:
-    MyLexer() { initFsmHandlers(); initKeywords(); }
+    MyLexer() { initFsmHandlers(); }
 
     ~MyLexer() {
         if (_output) {
@@ -178,11 +188,9 @@ public:
 
     void    initFsmHandlers();
 
-    void    initKeywords();
-
     int     scan(std::string filePath); 
 
-    int     output(std::string outputFile);
+    int     setOutput(std::string outputFile);
 
     Token   nextToken();
     
@@ -225,6 +233,8 @@ private:
 
     void    atIDPhase1(char);
 
+    void    atMinusPhase1(char);
+
     void    atStrPhase1(char);
 
     void    atNumPhase1(char);
@@ -258,7 +268,13 @@ private:
 
     std::string _cache;
 
-    std::map<std::string, TokenType> _keywordTab;
+    static std::map<std::string, TokenType> _kwStr2Type;
+
+    static std::map<TokenType, std::string> _kwType2Str;
+
+    static std::map<LexState, TokenType>    _Lex2Token;
+
+    static std::unordered_set<LexState>     _acceptable;
 };
 
 }

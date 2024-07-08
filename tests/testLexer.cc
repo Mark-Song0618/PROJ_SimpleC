@@ -13,7 +13,7 @@ int main(const int argc, const char** argv) {
 
 #ifdef SIMPLETEST
    lexer.scan("./tests/test.c"); 
-   lexer.output("./result.txt");
+   lexer.setOutput("./result.txt");
 # else
     if (argc != 3) {
         usage();
@@ -23,16 +23,13 @@ int main(const int argc, const char** argv) {
         return -2;
     }
 
-    if (lexer.output(argv[2])) {
+    if (lexer.setOutput(argv[2])) {
         return -3;
     }
 #endif
     LEX::Token token;
     while (true) {
         token = lexer.nextToken();
-        if (token.getType() == LEX::TokenType::FEOF) {
-            return 0;
-        }
         if (token.getType() == LEX::TokenType::BAD) {
             // report error
             return -4;

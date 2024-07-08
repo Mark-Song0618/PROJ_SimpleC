@@ -18,7 +18,7 @@ static std::map<ERRTYPE, const char*> _labelTab =
 void
 Msg::error(ERRTYPE err, const std::string& msg)
 {
-    printf("[%s]%s", _labelTab[err], msg.c_str());
+    printf("[%s]%s\n", _labelTab[err], msg.c_str());
 }
     
 void 
