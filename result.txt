@@ -1,0 +1,59 @@
+Type: INT. Line: 0. Col: 1
+Type: ID. Value:globalVar. Line: 0. Col: 5
+Type: SEMICOLON. Line: 0. Col: 14
+Type: VOID. Line: 2. Col: 1
+Type: ID. Value:printInfo. Line: 2. Col: 6
+Type: PARENTHESESRL. Line: 2. Col: 15
+Type: CONST. Line: 2. Col: 16
+Type: INT. Line: 2. Col: 22
+Type: . Line: 2. Col: 25
+Type: ID. Value:param. Line: 2. Col: 27
+Type: PARENTHESESL. Line: 2. Col: 32
+Type: BRACEL. Line: 3. Col: 1
+Type: ID. Value:char. Line: 4. Col: 5
+Type: MULTI. Line: 4. Col: 9
+Type: ID. Value:msg. Line: 4. Col: 11
+Type: EQUAL. Line: 4. Col: 15
+Type: STRLITERAL. Value:"Result: ". Line: 4. Col: 17
+Type: SEMICOLON. Line: 4. Col: 27
+Type: ID. Value:print. Line: 5. Col: 5
+Type: PARENTHESESRL. Line: 5. Col: 10
+Type: ID. Value:msg. Line: 5. Col: 11
+Type: PARENTHESESL. Line: 5. Col: 14
+Type: SEMICOLON. Line: 5. Col: 15
+Type: ID. Value:print. Line: 6. Col: 5
+Type: PARENTHESESRL. Line: 6. Col: 10
+Type: ID. Value:globalVar. Line: 6. Col: 11
+Type: ADD. Line: 6. Col: 21
+Type: ID. Value:param. Line: 6. Col: 23
+Type: PARENTHESESL. Line: 6. Col: 28
+Type: SEMICOLON. Line: 6. Col: 29
+Type: BRACER. Line: 7. Col: 1
+Type: INT. Line: 9. Col: 1
+Type: ID. Value:main. Line: 9. Col: 5
+Type: PARENTHESESRL. Line: 9. Col: 9
+Type: CONST. Line: 9. Col: 10
+Type: INT. Line: 9. Col: 16
+Type: ID. Value:argc. Line: 9. Col: 20
+Type: COMMA. Line: 9. Col: 24
+Type: CONST. Line: 9. Col: 26
+Type: ID. Value:char. Line: 9. Col: 32
+Type: MULTI. Line: 9. Col: 36
+Type: MULTI. Line: 9. Col: 37
+Type: ID. Value:argv. Line: 9. Col: 39
+Type: PARENTHESESL. Line: 9. Col: 43
+Type: BRACEL. Line: 10. Col: 1
+Type: LONG. Line: 11. Col: 5
+Type: ID. Value:localVar. Line: 11. Col: 10
+Type: EQUAL. Line: 11. Col: 19
+Type: INT. Line: 11. Col: 21
+Type: SEMICOLON. Line: 11. Col: 22
+Type: ID. Value:printInfo. Line: 12. Col: 5
+Type: PARENTHESESRL. Line: 12. Col: 14
+Type: ID. Value:localVar. Line: 12. Col: 15
+Type: PARENTHESESL. Line: 12. Col: 23
+Type: SEMICOLON. Line: 12. Col: 24
+Type: RETURN. Line: 13. Col: 5
+Type: INT. Line: 13. Col: 12
+Type: SEMICOLON. Line: 13. Col: 13
+Type: BRACER. Line: 14. Col: 1
