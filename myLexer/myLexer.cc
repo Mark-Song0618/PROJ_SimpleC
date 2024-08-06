@@ -115,6 +115,9 @@ Token::dump() {
     case TokenType::DIV:
         rt += "DIV";
         break;
+    case TokenType::MOD:
+        rt += "MOD";
+        break;
     case TokenType::EQUAL:
         rt += "EQUAL";
         break;
@@ -149,7 +152,7 @@ Token::dump() {
         rt += "PARENTHESESRL";
         break;
     case TokenType::PARENTHESESR:
-        rt += "PARENTHESESL";
+        rt += "PARENTHESESR";
         break;
     case TokenType::BRACKETL:
         rt += "BRACEL";
@@ -192,6 +195,9 @@ Token::dump() {
         break;
     case TokenType::BITNOT:
         rt += "~";
+        break;
+    case TokenType::XOR:
+        rt += "^";
         break;
     default:
         rt += "INVALID";
@@ -269,6 +275,7 @@ MyLexer::_Lex2Token =
     {LexState::MINUS,           TokenType::MINUS},
     {LexState::MULTI,           TokenType::MULTI},
     {LexState::DIV,             TokenType::DIV},
+    {LexState::MOD,             TokenType::MOD},
     {LexState::EQUAL,           TokenType::EQUAL},
     {LexState::GREATER,         TokenType::GREATER},
     {LexState::LESS,            TokenType::LESS},
@@ -278,7 +285,8 @@ MyLexer::_Lex2Token =
     {LexState::LOGOR,           TokenType::LOGOR},
     {LexState::BITOR,           TokenType::BITOR},
     {LexState::LOGNOT,          TokenType::LOGNOT},
-    {LexState::BITNOT,           TokenType::BITNOT},
+    {LexState::BITNOT,          TokenType::BITNOT},
+    {LexState::XOR,             TokenType::XOR},
     {LexState::POINTER,         TokenType::POINTER},
     
        // punctuation
@@ -305,6 +313,7 @@ MyLexer::_acceptable =
     LexState::POINTER,
     LexState::MULTI,
     LexState::DIV,
+    LexState::MOD,
     LexState::EQUAL,
     LexState::GREATER,
     LexState::LESS,
@@ -360,17 +369,17 @@ MyLexer::scan(std::string filePath)
 {
     // check if file exist
     if (access(filePath.c_str(), F_OK)) {
-        Msg::instance().error(ERRTYPE::FILE_NOT_EXIST, "source file not exists.");
+        Msg::instance().message(MSGTYPE::FILE_NOT_EXIST, "source file not exists.");
         return -1;
     }
     
     if (access(filePath.c_str(), R_OK)) {
-        Msg::instance().error(ERRTYPE::FILE_NOT_READABLE, "source file not access to read");
+        Msg::instance().message(MSGTYPE::FILE_NOT_READABLE, "source file not access to read");
         return -1;
     }
 
     if (!(_input = fopen(filePath.c_str(), "r"))) {
-        Msg::instance().error(ERRTYPE::FILE_NOT_OPEN, "can not open source file");
+        Msg::instance().message(MSGTYPE::FILE_NOT_OPEN, "can not open source file");
         return -1;
     }
 
@@ -389,11 +398,11 @@ MyLexer::setOutput(std::string outputFile = "")
     } 
 
     if (!access(outputFile.c_str(), F_OK)) {
-        Msg::instance().warn(ERRTYPE::FILE_EXIST, "file exists. Might be overwritten.");
+        Msg::instance().message(MSGTYPE::FILE_EXIST, "file exists. Might be overwritten.");
     }
 
     if (!(_output = fopen(outputFile.c_str(), "w+"))) {
-        Msg::instance().error(ERRTYPE::FILE_NOT_WRITABLE, "cannot open file to write");
+        Msg::instance().message(MSGTYPE::FILE_NOT_WRITABLE, "cannot open file to write");
         return -1;
     }
 
@@ -401,11 +410,17 @@ MyLexer::setOutput(std::string outputFile = "")
 }
 
 Token
-MyLexer::nextToken()
+MyLexer::nextToken(bool noPeek)
 {
     // fsm 
     static char c;
     Token tk;
+    if (!noPeek && !_peek.empty()) {
+        tk = _peek.front();
+        _peek.erase(_peek.begin());
+        return tk;
+    }
+
     while (true) {
         if (_absorbed) {
             c = getNextInput();
@@ -431,6 +446,27 @@ MyLexer::nextToken()
     }
 
     return tk; // actually won't get there.
+}
+
+Token
+MyLexer::peekToken(bool reset)
+{
+    if (reset) _peekPos = 1;
+
+    if (_peekPos < _peek.size()) {
+        return _peek[_peekPos++]; 
+    } else {
+        Token tk;
+        while(_peek.size() < _peekPos) {
+            tk = nextToken(true);
+            _peek.push_back(tk);
+            if (tk.getType() != TokenType::FEND && 
+                tk.getType() != TokenType::BAD)
+                break;
+        }
+        ++_peekPos;
+        return _peek.back();
+    }
 }
 
 char 
@@ -570,6 +606,7 @@ MyLexer::isPunct(char c)
         '-',
         '*',
         '\\',
+        '%',
         ',',
         '.',
         ';',
@@ -583,6 +620,10 @@ MyLexer::isPunct(char c)
         '<',
         '>',
         '=',
+        '|',
+        '^',
+        '~',
+        '!',
     };
     return _puncts.find(c) != _puncts.end();
 }
@@ -615,6 +656,11 @@ MyLexer::keyword(const std::string img)
     }
 }
 
+std::string
+MyLexer::keywordStr(TokenType kw) {
+    return _kwType2Str[kw];
+}
+
 void
 MyLexer::atStart(char c)
 {
@@ -635,6 +681,8 @@ MyLexer::atStart(char c)
         changeState(LexState::ADD);
     } else if (c == '-') {
         changeState(LexState::MINUS_PHASE1);
+    } else if (c == '%') {
+        changeState(LexState::MOD);
     } else if (c == '*') {
         changeState(LexState::MULTI);
     } else if (c == '=') {
@@ -671,6 +719,8 @@ MyLexer::atStart(char c)
         changeState(LexState::LOGNOT);
     } else if (c== '~') {
         changeState(LexState::BITNOT);
+    } else if (c == '^') {
+        changeState(LexState::XOR);
     }
 
     _tkStart = _curr;
@@ -840,7 +890,7 @@ MyLexer::errorHandler()
     msg += ", Col: ";
     msg += std::to_string(_curr.column());
     msg += "\n";
-    Msg::instance().error(ERRTYPE::UNREC_TOKEN, msg);
+    Msg::instance().message(MSGTYPE::UNREC_TOKEN, msg);
 }
 
 void

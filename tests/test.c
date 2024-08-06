@@ -1,9 +1,9 @@
 //test0 include
 
-#include<stdio.h>
+ #include <header.h>
 
 // test0： global var
-int globalVar;
+//int globalVar;
 
 // test1： global func 
 void printInfo(const int& param)
@@ -12,13 +12,15 @@ void printInfo(const int& param)
     char* msg = "Result: ";
     printf("%s", msg);
     printf("%d", globalVar + param);
-}
+};
 
 // test3: struct def
-typedef struct Person {
-    int age;
+struct Person {
+    int age = 30;
     char* name;
-} Person;
+};
+
+typedef struct Person Person;
 
 int main(const int argc, const char** argv)
 {
@@ -26,13 +28,13 @@ int main(const int argc, const char** argv)
     Person* p = &mark;
     p->age = 30;
     mark.name = "Mark";
-    long localVar = 1;
+    int localVar = 1;
     printInfo(localVar);
 
-    bool cond1 = true, cond2 = false;
-    if (cond1 && cond2) {
+    bool cond1 = true;
+    if (cond1 && cond2 == true) {
         //
-    } else if (cond1 || cond2) {
+    } else {
         //
     }
 

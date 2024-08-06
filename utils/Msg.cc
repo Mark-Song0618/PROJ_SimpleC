@@ -4,33 +4,27 @@
 namespace UTIL 
 {
 
-static std::map<ERRTYPE, const char*> _labelTab =
+static std::map<MSGTYPE, const char*> _labelTab =
 {
-    {ERRTYPE::FILE_EXIST, "FATAL:FILE-IO"},
-    {ERRTYPE::FILE_NOT_EXIST, "FATAL:FILE-IO"},
-    {ERRTYPE::FILE_NOT_READABLE, "FATAL:FILE-IO"},
-    {ERRTYPE::FILE_NOT_WRITABLE, "FATAL:FILE-IO"},
-    {ERRTYPE::FILE_NOT_OPEN, "FATAL: FILE-IO"},
+    {MSGTYPE::DEFUALT_ERR,          "FATAL:"},
+    {MSGTYPE::FILE_EXIST,           "FATAL: FILE-IO"},
+    {MSGTYPE::FILE_NOT_EXIST,       "FATAL: FILE-IO"},
+    {MSGTYPE::FILE_NOT_READABLE,    "FATAL: FILE-IO"},
+    {MSGTYPE::FILE_NOT_WRITABLE,    "FATAL: FILE-IO"},
+    {MSGTYPE::FILE_NOT_OPEN,        "FATAL: FILE-IO"},
+    {MSGTYPE::UNREC_TOKEN,          "FATAL: UNREC-TOEKN"},
+    {MSGTYPE::PARSE_FAIL,           "FATAL: PARSE_FAIL"},
 
-    {ERRTYPE::UNREC_TOKEN, "FATAL: UNREC-TOEKN"},
+    {MSGTYPE::DEFUALT_WARN,         "WARN:"},
+
+
+    {MSGTYPE::DEFUALT_MSG,          "MSG:"},
 };
 
 void
-Msg::error(ERRTYPE err, const std::string& msg)
+Msg::message(MSGTYPE type, const std::string& msg)
 {
-    printf("[%s]%s\n", _labelTab[err], msg.c_str());
-}
-    
-void 
-Msg::warn(ERRTYPE err, const std::string& msg)
-{
-    error(err, msg);
-}
-    
-void
-Msg::message(ERRTYPE err, const std::string& msg)
-{
-    error(err, msg);
+    printf("[%s]%s\n", _labelTab[type], msg.c_str());
 }
 
 }

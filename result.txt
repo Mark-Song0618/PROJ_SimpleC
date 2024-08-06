@@ -1,13 +1,10 @@
-Type: #. Line: 3. Col: 1
-Type: INCLUDE. Line: 3. Col: 2
-Type: LESS. Line: 3. Col: 9
-Type: ID. Value:stdio. Line: 3. Col: 10
-Type: DOT. Line: 3. Col: 15
-Type: ID. Value:h. Line: 3. Col: 16
-Type: GREATER. Line: 3. Col: 17
-Type: INT. Line: 6. Col: 1
-Type: ID. Value:globalVar. Line: 6. Col: 5
-Type: SEMICOLON. Line: 6. Col: 14
+Type: #. Line: 3. Col: 2
+Type: INCLUDE. Line: 3. Col: 3
+Type: LESS. Line: 3. Col: 11
+Type: ID. Value:header. Line: 3. Col: 12
+Type: DOT. Line: 3. Col: 18
+Type: ID. Value:h. Line: 3. Col: 19
+Type: GREATER. Line: 3. Col: 20
 Type: VOID. Line: 9. Col: 1
 Type: ID. Value:printInfo. Line: 9. Col: 6
 Type: PARENTHESESRL. Line: 9. Col: 15
@@ -15,7 +12,7 @@ Type: CONST. Line: 9. Col: 16
 Type: INT. Line: 9. Col: 22
 Type: &. Line: 9. Col: 25
 Type: ID. Value:param. Line: 9. Col: 27
-Type: PARENTHESESL. Line: 9. Col: 32
+Type: PARENTHESESR. Line: 9. Col: 32
 Type: BRACEL. Line: 10. Col: 1
 Type: CHAR. Line: 12. Col: 5
 Type: MULTI. Line: 12. Col: 9
@@ -28,7 +25,7 @@ Type: PARENTHESESRL. Line: 13. Col: 11
 Type: STRLITERAL. Value:"%s". Line: 13. Col: 12
 Type: COMMA. Line: 13. Col: 16
 Type: ID. Value:msg. Line: 13. Col: 18
-Type: PARENTHESESL. Line: 13. Col: 21
+Type: PARENTHESESR. Line: 13. Col: 21
 Type: SEMICOLON. Line: 13. Col: 22
 Type: ID. Value:printf. Line: 14. Col: 5
 Type: PARENTHESESRL. Line: 14. Col: 11
@@ -37,96 +34,95 @@ Type: COMMA. Line: 14. Col: 16
 Type: ID. Value:globalVar. Line: 14. Col: 18
 Type: ADD. Line: 14. Col: 28
 Type: ID. Value:param. Line: 14. Col: 30
-Type: PARENTHESESL. Line: 14. Col: 35
+Type: PARENTHESESR. Line: 14. Col: 35
 Type: SEMICOLON. Line: 14. Col: 36
 Type: BRACER. Line: 15. Col: 1
-Type: TYPEDEF. Line: 18. Col: 1
-Type: STRUCT. Line: 18. Col: 9
-Type: ID. Value:Person. Line: 18. Col: 16
-Type: BRACEL. Line: 18. Col: 23
+Type: SEMICOLON. Line: 15. Col: 2
+Type: STRUCT. Line: 18. Col: 1
+Type: ID. Value:Person. Line: 18. Col: 8
+Type: BRACEL. Line: 18. Col: 15
 Type: INT. Line: 19. Col: 5
 Type: ID. Value:age. Line: 19. Col: 9
-Type: SEMICOLON. Line: 19. Col: 12
+Type: EQUAL. Line: 19. Col: 13
+Type: INTEGERLITERAL. Value:30. Line: 19. Col: 15
+Type: SEMICOLON. Line: 19. Col: 17
 Type: CHAR. Line: 20. Col: 5
 Type: MULTI. Line: 20. Col: 9
 Type: ID. Value:name. Line: 20. Col: 11
 Type: SEMICOLON. Line: 20. Col: 15
 Type: BRACER. Line: 21. Col: 1
-Type: ID. Value:Person. Line: 21. Col: 3
-Type: SEMICOLON. Line: 21. Col: 9
-Type: INT. Line: 23. Col: 1
-Type: ID. Value:main. Line: 23. Col: 5
-Type: PARENTHESESRL. Line: 23. Col: 9
-Type: CONST. Line: 23. Col: 10
-Type: INT. Line: 23. Col: 16
-Type: ID. Value:argc. Line: 23. Col: 20
-Type: COMMA. Line: 23. Col: 24
-Type: CONST. Line: 23. Col: 26
-Type: CHAR. Line: 23. Col: 32
-Type: MULTI. Line: 23. Col: 36
-Type: MULTI. Line: 23. Col: 37
-Type: ID. Value:argv. Line: 23. Col: 39
-Type: PARENTHESESL. Line: 23. Col: 43
-Type: BRACEL. Line: 24. Col: 1
-Type: ID. Value:Person. Line: 25. Col: 5
-Type: ID. Value:mark. Line: 25. Col: 12
-Type: SEMICOLON. Line: 25. Col: 16
-Type: ID. Value:Person. Line: 26. Col: 5
-Type: MULTI. Line: 26. Col: 11
-Type: ID. Value:p. Line: 26. Col: 13
-Type: EQUAL. Line: 26. Col: 15
-Type: &. Line: 26. Col: 17
-Type: ID. Value:mark. Line: 26. Col: 18
-Type: SEMICOLON. Line: 26. Col: 22
-Type: ID. Value:p. Line: 27. Col: 5
-Type: POINTER. Line: 27. Col: 6
-Type: ID. Value:age. Line: 27. Col: 8
-Type: EQUAL. Line: 27. Col: 12
-Type: INTEGERLITERAL. Value:30. Line: 27. Col: 14
+Type: SEMICOLON. Line: 21. Col: 2
+Type: TYPEDEF. Line: 23. Col: 1
+Type: STRUCT. Line: 23. Col: 9
+Type: ID. Value:Person. Line: 23. Col: 16
+Type: ID. Value:Person. Line: 23. Col: 23
+Type: SEMICOLON. Line: 23. Col: 29
+Type: INT. Line: 25. Col: 1
+Type: ID. Value:main. Line: 25. Col: 5
+Type: PARENTHESESRL. Line: 25. Col: 9
+Type: CONST. Line: 25. Col: 10
+Type: INT. Line: 25. Col: 16
+Type: ID. Value:argc. Line: 25. Col: 20
+Type: COMMA. Line: 25. Col: 24
+Type: CONST. Line: 25. Col: 26
+Type: CHAR. Line: 25. Col: 32
+Type: MULTI. Line: 25. Col: 36
+Type: MULTI. Line: 25. Col: 37
+Type: ID. Value:argv. Line: 25. Col: 39
+Type: PARENTHESESR. Line: 25. Col: 43
+Type: BRACEL. Line: 26. Col: 1
+Type: ID. Value:Person. Line: 27. Col: 5
+Type: ID. Value:mark. Line: 27. Col: 12
 Type: SEMICOLON. Line: 27. Col: 16
-Type: ID. Value:mark. Line: 28. Col: 5
-Type: DOT. Line: 28. Col: 9
-Type: ID. Value:name. Line: 28. Col: 10
+Type: ID. Value:Person. Line: 28. Col: 5
+Type: MULTI. Line: 28. Col: 11
+Type: ID. Value:p. Line: 28. Col: 13
 Type: EQUAL. Line: 28. Col: 15
-Type: STRLITERAL. Value:"Mark". Line: 28. Col: 17
-Type: SEMICOLON. Line: 28. Col: 23
-Type: LONG. Line: 29. Col: 5
-Type: ID. Value:localVar. Line: 29. Col: 10
-Type: EQUAL. Line: 29. Col: 19
-Type: INTEGERLITERAL. Value:1. Line: 29. Col: 21
-Type: SEMICOLON. Line: 29. Col: 22
-Type: ID. Value:printInfo. Line: 30. Col: 5
-Type: PARENTHESESRL. Line: 30. Col: 14
-Type: ID. Value:localVar. Line: 30. Col: 15
-Type: PARENTHESESL. Line: 30. Col: 23
-Type: SEMICOLON. Line: 30. Col: 24
-Type: BOOl. Line: 32. Col: 5
-Type: ID. Value:cond1. Line: 32. Col: 10
-Type: EQUAL. Line: 32. Col: 16
-Type: TRUE. Line: 32. Col: 18
-Type: COMMA. Line: 32. Col: 22
-Type: ID. Value:cond2. Line: 32. Col: 24
-Type: EQUAL. Line: 32. Col: 30
-Type: FALSE. Line: 32. Col: 32
-Type: SEMICOLON. Line: 32. Col: 37
-Type: IF. Line: 33. Col: 5
-Type: PARENTHESESRL. Line: 33. Col: 8
-Type: ID. Value:cond1. Line: 33. Col: 9
-Type: &&. Line: 33. Col: 15
-Type: ID. Value:cond2. Line: 33. Col: 18
-Type: PARENTHESESL. Line: 33. Col: 23
-Type: BRACEL. Line: 33. Col: 25
-Type: BRACER. Line: 35. Col: 5
-Type: ELSE. Line: 35. Col: 7
-Type: IF. Line: 35. Col: 12
-Type: PARENTHESESRL. Line: 35. Col: 15
-Type: ID. Value:cond1. Line: 35. Col: 16
-Type: ||. Line: 35. Col: 22
-Type: ID. Value:cond2. Line: 35. Col: 25
-Type: PARENTHESESL. Line: 35. Col: 30
-Type: BRACEL. Line: 35. Col: 32
+Type: &. Line: 28. Col: 17
+Type: ID. Value:mark. Line: 28. Col: 18
+Type: SEMICOLON. Line: 28. Col: 22
+Type: ID. Value:p. Line: 29. Col: 5
+Type: POINTER. Line: 29. Col: 6
+Type: ID. Value:age. Line: 29. Col: 8
+Type: EQUAL. Line: 29. Col: 12
+Type: INTEGERLITERAL. Value:30. Line: 29. Col: 14
+Type: SEMICOLON. Line: 29. Col: 16
+Type: ID. Value:mark. Line: 30. Col: 5
+Type: DOT. Line: 30. Col: 9
+Type: ID. Value:name. Line: 30. Col: 10
+Type: EQUAL. Line: 30. Col: 15
+Type: STRLITERAL. Value:"Mark". Line: 30. Col: 17
+Type: SEMICOLON. Line: 30. Col: 23
+Type: INT. Line: 31. Col: 5
+Type: ID. Value:localVar. Line: 31. Col: 9
+Type: EQUAL. Line: 31. Col: 18
+Type: INTEGERLITERAL. Value:1. Line: 31. Col: 20
+Type: SEMICOLON. Line: 31. Col: 21
+Type: ID. Value:printInfo. Line: 32. Col: 5
+Type: PARENTHESESRL. Line: 32. Col: 14
+Type: ID. Value:localVar. Line: 32. Col: 15
+Type: PARENTHESESR. Line: 32. Col: 23
+Type: SEMICOLON. Line: 32. Col: 24
+Type: BOOl. Line: 34. Col: 5
+Type: ID. Value:cond1. Line: 34. Col: 10
+Type: EQUAL. Line: 34. Col: 16
+Type: TRUE. Line: 34. Col: 18
+Type: SEMICOLON. Line: 34. Col: 22
+Type: IF. Line: 35. Col: 5
+Type: PARENTHESESRL. Line: 35. Col: 8
+Type: ID. Value:cond1. Line: 35. Col: 9
+Type: &&. Line: 35. Col: 15
+Type: ID. Value:cond2. Line: 35. Col: 18
+Type: EQUAL. Line: 35. Col: 24
+Type: EQUAL. Line: 35. Col: 25
+Type: TRUE. Line: 35. Col: 27
+Type: PARENTHESESR. Line: 35. Col: 31
+Type: BRACEL. Line: 35. Col: 33
 Type: BRACER. Line: 37. Col: 5
-Type: RETURN. Line: 39. Col: 5
-Type: INTEGERLITERAL. Value:0. Line: 39. Col: 12
-Type: SEMICOLON. Line: 39. Col: 13
-Type: BRACER. Line: 40. Col: 1
+Type: ELSE. Line: 37. Col: 7
+Type: BRACEL. Line: 37. Col: 12
+Type: BRACER. Line: 39. Col: 5
+Type: RETURN. Line: 41. Col: 5
+Type: INTEGERLITERAL. Value:0. Line: 41. Col: 12
+Type: SEMICOLON. Line: 41. Col: 13
+Type: BRACER. Line: 42. Col: 1

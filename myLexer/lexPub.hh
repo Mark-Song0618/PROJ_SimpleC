@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string>
 #include <map>
+#include <queue>
 #include <unordered_set>
 #include <variant>
 #include "../utils/Fsm.hh"
@@ -57,6 +58,7 @@ enum class TokenType {
     MINUS,
     MULTI,
     DIV,
+    MOD,
     EQUAL,
     GREATER,
     LESS,
@@ -71,6 +73,8 @@ enum class TokenType {
     
     LOGNOT,
     BITNOT,
+
+    XOR,
 
     // punctuation
     PARENTHESESL,
@@ -120,6 +124,7 @@ enum class LexState {
 
     MULTI,
     DIV,
+    MOD,
     EQUAL,
     GREATER,
     LESS,
@@ -141,6 +146,7 @@ enum class LexState {
     OR,
     LOGOR,
     BITOR,
+    XOR,
     
     LOGNOT,
     BITNOT,
@@ -179,6 +185,10 @@ public:
     template<typename T>
     T                   getValue() { return std::get<T>(_value); }
 
+    int                 currLine() { return _linefile.line(); }
+
+    int                 currColumn() { return _linefile.column(); }
+
     std::string         dump();
 
 private:
@@ -214,8 +224,15 @@ public:
 
     int     setOutput(std::string outputFile);
 
-    Token   nextToken();
+    Token   nextToken(bool noPeek = false);
+
+    Token   peekToken(bool reset = false);
     
+    TokenType
+            keyword(const std::string img);
+
+    std::string
+            keywordStr(TokenType);
 private:
     void    toNextState(char c) override;
 
@@ -242,9 +259,6 @@ private:
     bool    isSplitter(char);
 
     bool    isKeyword(const std::string&);
-
-    TokenType
-            keyword(const std::string img);
 
     // FSM functions
     void    changeState(LexState state) { _state = state; }
@@ -284,8 +298,8 @@ private:
 private:
     FILE*    _input;
 
-    FILE*    _output;  // verbose
-                       //
+    FILE*    _output;
+                       
     Cursor   _curr;
 
     Cursor   _tkStart;
@@ -293,6 +307,10 @@ private:
     bool     _absorbed;
 
     std::string _cache;
+
+    std::vector<Token> _peek;
+
+    size_t   _peekPos; // the pos after the first token
 
     static std::map<std::string, TokenType> _kwStr2Type;
 
