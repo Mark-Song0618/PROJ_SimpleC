@@ -61,15 +61,6 @@ Token::dump() {
     case TokenType::DOUBLE:
         rt += "DOUBLE";
         break;
-    case TokenType::BOOL:
-        rt += "BOOl";
-        break;
-    case LEX::TokenType::TRUE:
-        rt += "TRUE";
-        break;
-    case LEX::TokenType::FALSE:
-        rt += "FALSE";
-        break;
     case TokenType::STRUCT:
         rt += "STRUCT";
         break;
@@ -214,9 +205,6 @@ std::map<std::string, TokenType>
 MyLexer::_kwStr2Type = 
 {
     {"void",        TokenType::VOID},
-    {"bool",        TokenType::BOOL},
-    {"true",        TokenType::TRUE},
-    {"false",       TokenType::FALSE},
     {"char",        TokenType::CHAR},
     {"short",       TokenType::SHORT},
     {"int",         TokenType::INT},
@@ -234,15 +222,13 @@ MyLexer::_kwStr2Type =
     {"continue",    TokenType::DOUBLE},
     {"return",      TokenType::RETURN},
     {"include",     TokenType::INCLUDE},
+    {"...",         TokenType::VARPARAMS},
 };
 
 std::map<TokenType, std::string>
 MyLexer::_kwType2Str = 
 {
     {TokenType::VOID,       "void"},
-    {TokenType::BOOL,       "bool"},
-    {TokenType::TRUE,       "true"},
-    {TokenType::FALSE,      "false"},
     {TokenType::CHAR,       "char"},
     {TokenType::SHORT,      "short"},
     {TokenType::INT,        "int"},
@@ -259,6 +245,7 @@ MyLexer::_kwType2Str =
     {TokenType::BREAK,      "break"},
     {TokenType::CONTINUE,   "continue"},
     {TokenType::RETURN,     "return"},
+    {TokenType::VARPARAMS,  "..."},
 };
 
 std::map<LexState, TokenType>   
@@ -299,6 +286,7 @@ MyLexer::_Lex2Token =
     {LexState::COMMA,           TokenType::COMMA},
     {LexState::SEMICOLON,       TokenType::SEMICOLON},
     {LexState::SHARP,           TokenType::SHARP},
+    {LexState::VARPARAMS,       TokenType::VARPARAMS}
 };
 
 std::unordered_set<LexState> 
@@ -324,6 +312,7 @@ MyLexer::_acceptable =
     LexState::BRACEL,
     LexState::BRACER,
     LexState::DOT,
+    LexState::VARPARAMS,
     LexState::COMMA,
     LexState::SEMICOLON,
     LexState::LOGAND,
@@ -333,6 +322,7 @@ MyLexer::_acceptable =
     LexState::LOGNOT,
     LexState::BITNOT,
     LexState::SHARP,
+    LexState::VARPARAMS,
 };
 
 void
@@ -359,6 +349,7 @@ MyLexer::initFsmHandlers()
     
     addTransfunc(LexState::AND, std::bind(&MyLexer::atAnd, this, std::placeholders::_1));
     addTransfunc(LexState::OR,  std::bind(&MyLexer::atOr, this, std::placeholders::_1));
+    addTransfunc(LexState::PROCESSDOT,  std::bind(&MyLexer::atDOT, this, std::placeholders::_1));
 
     addTransfunc(LexState::INVALID, std::bind(&MyLexer::errorHandler, this));
 }
@@ -383,6 +374,7 @@ MyLexer::scan(std::string filePath)
         return -1;
     }
 
+    _srcFile = filePath;
     _absorbed = true;
     _curr = {1,1};
     initState(LexState::START);
@@ -413,7 +405,6 @@ Token
 MyLexer::nextToken(bool noPeek)
 {
     // fsm 
-    static char c;
     Token tk;
     if (!noPeek && !_peek.empty()) {
         tk = _peek.front();
@@ -423,13 +414,13 @@ MyLexer::nextToken(bool noPeek)
 
     while (true) {
         if (_absorbed) {
-            c = getNextInput();
+            _c = getNextInput();
             _absorbed = false;
-        } else if (c == -1/*EOF*/){
+        } else if (_c == -1/*EOF*/){
             return Token(TokenType::FEND, "", _curr);
         }
 
-        toNextState(c);
+        toNextState(_c);
         if (stateAcceptable()) {
             tk = extractToken();
             reset();
@@ -704,7 +695,7 @@ MyLexer::atStart(char c)
     } else if (c == '}') {
         changeState(LexState::BRACER);
     } else if (c == '.') {
-        changeState(LexState::DOT);
+        changeState(LexState::PROCESSDOT);
     } else if (c == ',') {
         changeState(LexState::COMMA);
     } else if (c == ';') {
@@ -876,6 +867,26 @@ MyLexer::atOr(char c)
         absorb(c);
     } else {
         changeState(LexState::BITOR);
+    }
+}
+
+void
+MyLexer::atDOT(char c)
+{
+    static int dotCnt = 1;
+    if (c != '.') {
+        if (dotCnt == 1) {
+            changeState(LexState::DOT); 
+            dotCnt = 1;
+        } else if (dotCnt == 3) {
+            changeState(LexState::VARPARAMS);
+            dotCnt = 1;
+        } else {
+            changeState(LexState::INVALID);
+        }
+    } else {
+        ++dotCnt;
+        absorb(c);
     }
 }
 

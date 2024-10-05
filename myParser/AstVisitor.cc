@@ -11,12 +11,20 @@ VISITNODE(VarDef)
 VISITNODE(TypeDef)
 VISITNODE(IfStmt)
 VISITNODE(ForStmt)
-VISITNODE(AssignStmt)
+VISITNODE(BreakStmt)
+VISITNODE(ContinueStmt)
+VISITNODE(ExprStmt)
+VISITNODE(Variable)
 VISITNODE(FuncCall)
+VISITNODE(StrLiteral)
+VISITNODE(IntLiteral)
+VISITNODE(FloatLiteral)
+VISITNODE(Parenthesed)
+VISITNODE(Keyword)
 VISITNODE(InclStmt)
-VISITNODE(AtomExpr)
 VISITNODE(UniOpExpr)
 VISITNODE(BinOpExpr)
+VISITNODE(MemberExpr)
 VISITNODE(TypeNode)
 
 void 
@@ -37,11 +45,8 @@ AstVisitor::visit(ReturnStmt* rt)
 void 
 AstVisitor::visit(FuncDef* func)
 {
-    if (func->getRtType()) {
-        func->getRtType()->accept(this);
-    }
-    if (func->getId()) {
-        func->getId()->accept(this);
+    if (func->getRetType()) {
+        func->getRetType()->accept(this);
     }
     for (auto param : func->getParams()) {
         param->accept(this);
@@ -54,7 +59,6 @@ AstVisitor::visit(FuncDef* func)
 void 
 AstVisitor::visit(StructDef* def)
 {
-    if (def->getId()) def->getId()->accept(this);
     for (auto mem: def->getmembers()) {
         mem->accept(this);
     }
@@ -65,10 +69,6 @@ AstVisitor::visit(VarDef* var)
 {
     if (var->getTypeNode()) {
         var->getTypeNode()->accept(this);
-    }
-
-    if (var->getId()) {
-        var->getId()->accept(this);
     }
 
     if (var->getInit()) {
@@ -82,11 +82,6 @@ AstVisitor::visit(TypeDef* tdef)
     if (tdef->getOrigType()) {
         tdef->getOrigType()->accept(this);
     }
-
-    if (tdef->getDefinedType()) {
-        tdef->getDefinedType()->accept(this);
-    }
-
 }
 
 void 
@@ -120,11 +115,27 @@ AstVisitor::visit(ForStmt* node)
     }
 }
 
+void    
+AstVisitor::visit(ContinueStmt*) {}
+    
+void    
+AstVisitor::visit(BreakStmt*) {}
+
 void 
-AstVisitor::visit(AssignStmt* node)
+AstVisitor::visit(ExprStmt* node)
 {
-    if (node->getLhs()) node->getLhs()->accept(this);
-    if (node->getRhs()) node->getRhs()->accept(this);
+    if (node->getExpr())
+        node->getExpr()->accept(this);
+}
+
+void 
+AstVisitor::visit(InclStmt* node)
+{
+}
+
+void
+AstVisitor::visit(Variable* var)
+{
 }
 
 void 
@@ -135,26 +146,39 @@ AstVisitor::visit(FuncCall* node)
     }
 }
 
-void 
-AstVisitor::visit(InclStmt* node)
+void
+AstVisitor::visit(StrLiteral* str)
 {
 }
 
-void 
-AstVisitor::visit(AtomExpr* expr)
+void
+AstVisitor::visit(IntLiteral* literal)
 {
-    if (expr->getAtomType() == AtomExpr::AtomType::FuncCall) {
-        expr->getFuncCall()->accept(this); 
-    } else if (expr->getAtomType() == AtomExpr::AtomType::Parenthesed) {
-        expr->getParenthesed()->accept(this); 
-    } 
+}
+
+void
+AstVisitor::visit(FloatLiteral* literal)
+{
+}
+
+void
+AstVisitor::visit(Parenthesed* expr)
+{
+    if (expr->getExpr()) {
+        expr->getExpr()->accept(this);
+    }
+}
+
+void
+AstVisitor::visit(Keyword* kw)
+{
 }
 
 void 
 AstVisitor::visit(UniOpExpr* expr)
 {
-    if (expr->getFactor()) {
-        expr->getFactor()->accept(this);
+    if (expr->getExpr()) {
+        expr->getExpr()->accept(this);
     }
 }
 
@@ -166,12 +190,17 @@ AstVisitor::visit(BinOpExpr* expr)
 }
 
 void 
-AstVisitor::visit(TypeNode* node)
+AstVisitor::visit(MemberExpr* node)
 {
-    if (!node->isBasic())
-        node->getBasicType()->accept(this);
+    if(node->getExpr()) {
+        node->getExpr()->accept(this);
+    }
 }
 
+void 
+AstVisitor::visit(TypeNode* node)
+{
+}
 
 }
 

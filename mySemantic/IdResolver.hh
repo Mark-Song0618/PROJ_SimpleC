@@ -11,7 +11,7 @@ namespace SEMANTIC {
 class IdResolver final : public SYNTAX::AstVisitor 
 {
 public:
-    void resolve(SYNTAX::TreeNode* root) { root->accept(this); }
+    void resolve(SYNTAX::Program* root) { root->accept(this); }
 
 private:
     virtual void    visit(SYNTAX::Program* n); 
@@ -24,7 +24,16 @@ private:
 
     virtual void    visit(SYNTAX::IfStmt*);
 
-    virtual void    visit(SYNTAX::AtomExpr*);
+    virtual void    visit(SYNTAX::Variable*);
+
+    virtual void    visit(SYNTAX::FuncCall*);
+
+    // no need to resolve type related objects 
+    virtual void    visit(SYNTAX::TypeDef*) {};
+
+    virtual void    visit(SYNTAX::TypeNode*) {}; 
+
+    virtual void    visit(SYNTAX::StructDef*) {};
 
     // create a scope when enter a block;
     // gather symbols to currScope
@@ -48,10 +57,6 @@ IdResolver::preAction(SYNTAX::FuncDef* def);
 
 template<>
 void    
-IdResolver::preAction(SYNTAX::VarDef* def); 
-
-template<>
-void    
 IdResolver::preAction(SYNTAX::ForStmt* fStmt); 
 
 template<>
@@ -60,10 +65,10 @@ IdResolver::postAction(SYNTAX::Program* prog);
 
 template<>
 void    
-IdResolver::postAction(SYNTAX::FuncDef*);
+IdResolver::postAction(SYNTAX::FuncDef* def);
 
 template<>
 void    
-IdResolver::postAction(SYNTAX::ForStmt*); 
+IdResolver::postAction(SYNTAX::ForStmt* fstmt); 
 
 }

@@ -1,10 +1,8 @@
 #include "astPub.hh"
+#include "../utils/Exception.hh"
 
 namespace SYNTAX
 {
-
-SyntaxType
-TreeNode::type() { return _type; } 
 
 Program::Program()
     :TreeNode(SyntaxType::Program)
@@ -17,6 +15,18 @@ Program::~Program()
     for (auto stmt : _stmts) {
         delete stmt;
     }
+}
+
+FuncVec                 
+Program::getFuncs()
+{
+    return _scope->getFunctions();
+}
+
+VarDefVec               
+Program::getGlobalVars()
+{
+    return _scope->getVariables();
 }
 
 StmtVec
@@ -33,13 +43,18 @@ Program::addStatement(Statement* stmt)
     _stmts.push_back(stmt);
 }
 
+void                    
+Program::addStatements(std::vector<Statement*> stmts)
+{
+    _stmts.insert(_stmts.end(), stmts.begin(), stmts.end());
+}
+
 FuncDef::FuncDef()
-    :Statement(SyntaxType::FuncDef), _defined(false) {}
+    :Statement(SyntaxType::FuncDef), _defined(false), _varArg(false) {}
 
 FuncDef::~FuncDef()
 {
     delete _rtType;
-    delete _id;
     for (auto param : _params) delete param;
     for (auto stmt : _stmts) delete stmt;
 }
@@ -61,7 +76,6 @@ StructDef::StructDef()
 
 StructDef::~StructDef()
 {
-    delete _id;
     for (auto mem : _members) delete mem;
 }
 
@@ -71,13 +85,25 @@ StructDef::addMember(VarDef* member)
     _members.push_back(member);
 }
 
+StructType*
+StructDef::extractType()
+{
+    if (!_defined) {
+        return nullptr;
+    }
+    StructType* type = new StructType(_name);
+    for (auto& member :_members) {
+        type->addMember(member->getId(), member->getTypeNode()->getType()); // the type of a struct member is definitely not a typeref.
+    }
+    return type;
+}
+
 VarDef::VarDef() 
-    :Statement(SyntaxType::VarDef), _type(nullptr), _id(nullptr), _initVal(nullptr) {}
+    :Statement(SyntaxType::VarDef), _type(nullptr), _initVal(nullptr) {}
 
 VarDef::~VarDef()
 {
     delete _type;
-    delete _id;
     if (_initVal) delete _initVal;
 }
 
@@ -85,6 +111,12 @@ void
 VarDef::addInitVal(Expr* initVal)
 {
     _initVal = initVal;
+}
+
+unsigned
+VarDef::size()
+{
+    return _type->getType()->size();
 }
 
 TypeDef::TypeDef()
@@ -99,7 +131,6 @@ TypeDef::setOrigType(TypeNode* origType)
 TypeDef::~TypeDef()
 {
     if (_type) delete _type;
-    if (_id) delete _id;
 }
 
 IfStmt::IfStmt()
@@ -168,39 +199,31 @@ ForStmt::addBody(Statement* stmt)
     _body.push_back(stmt);
 }
 
-AssignStmt::AssignStmt()
-    :Statement(SyntaxType::Assignment) {}
-
-AssignStmt::~AssignStmt()
+bool
+Variable::isLoadable()
 {
-    delete _left;
-    if (_right) delete _right;
+    return !getType()->isArrayType();
 }
 
-void                    
-AssignStmt::addLhs(Expr* lhs)
+bool 
+Variable::isAssignale()
 {
-    _left = lhs;
+    return !getType()->isConst();
 }
 
-void
-AssignStmt::addRhs(Expr* rhs)
+Type* 
+Variable::getType()
 {
-    _right = rhs;
-}
+    if (!_defVar) {
+        return nullptr;
+    }
 
-FuncCall::FuncCall()
-    :Statement(SyntaxType::FuncCall) {}
+    return _defVar->getTypeNode()->getType();
+}
 
 FuncCall::~FuncCall()
 {
     for (auto param : _params) delete param;
-}
-
-void                    
-FuncCall::setName(const std::string& funcName)
-{
-    _funcName = funcName;
 }
 
 void                    
@@ -209,18 +232,75 @@ FuncCall::addParam(Expr* param)
     _params.push_back(param);
 }
 
-AtomExpr::~AtomExpr()
+Type*
+FuncCall::getType()
 {
-    if (_parenthesedExpr) delete _parenthesedExpr;
-    if (_func) delete _func;
+    if (!_defFunc) {
+        return nullptr;
+    }
+    return _defFunc->getRetType()->getType();
+}
+
+unsigned                
+FuncCall::size()
+{
+    return _defFunc->getRetType()->getType()->size();
+}
+
+Type*
+StrLiteral::getType()
+{
+    Type* charType = TypeTable::getType("char");
+    return TypeTable::getPointerType(charType);
 }
 
 UniOpExpr::UniOpExpr(UniOpType type)
-    :Expr(SyntaxType::UniOpExpr), _type(type) {}
+    :Expr(SyntaxType::UniOpExpr), _opType(type) {}
 
 UniOpExpr::~UniOpExpr()
 {
     if (_expr) delete _expr;
+}
+
+bool                    
+UniOpExpr::isLhs()
+{
+    return _opType == RESOLVEADDR;
+}
+   
+bool
+UniOpExpr::isAssignale()
+{
+    if (isLoadable()) {
+        return !getType()->isConst(); 
+    }
+    return false;
+}
+
+bool                    
+UniOpExpr::isLoadable()
+{
+    if (isLhs() && !getType()->isArrayType()) {
+        return true;
+    }
+    return false;
+}
+
+Type*                   
+UniOpExpr::getType()
+{
+    if (_opType == UniOpExpr::GETADDR) {
+        return TypeTable::getPointerType(_expr->getType());
+    } else if (_opType == UniOpExpr::RESOLVEADDR) {
+        if (!_expr->getType()->isPointerType() && !_expr->getType()->isArrayType()) {
+            throw UTIL::MyException("resolveAddr on non pointer type");
+        } else {
+            PointerType* ptrType = dynamic_cast<PointerType*>(_expr->getType());
+            return ptrType->getBasicType();
+        }
+    } else {
+        return _expr->getType();
+    }
 }
 
 BinOpExpr::~BinOpExpr()
@@ -228,60 +308,96 @@ BinOpExpr::~BinOpExpr()
    if (_left) delete _left;
    if (_right) delete _right;
 }
-
-TypeNode*
-TypeNode::getBasicType(bool resolveOnce)
-{
-    TypeNode* baseType = nullptr;
-    if (isBasic()) {
-        return baseType;
-    }
     
-    if (resolveOnce) {
-        return _baseType;
-    }
-
-    baseType = _baseType;
-    while (baseType && !baseType->isBasic()) {
-        baseType = baseType->_baseType;
-    }
-
-    return baseType;
-}
-
-TypeNode*               
-TypeNode::getReferedType(bool resolveOnce)
+Type*  
+BinOpExpr::getType()
 {
-    TypeNode* baseType = this;
-    if (getTypeId() != TypeId::Ref) {
-        return baseType;
-    }
-   
-    // todo: baseType = Semantic::getType(_typename);
-    if (resolveOnce) {
-        return baseType;
+    switch (_opType) {
+    case REL:
+    case LESS:
+    case LARGER:
+    case LESSE:
+    case LARGERE:
+    case EQUAL:
+    case NOTEQUAL:
+    case AND:
+    case OR:
+        return TypeTable::getType("int");
+    case BITOR:
+    case BITAND:
+    case BITXOR:
+    case SHIFT:
+    case SHR:
+    case SHL:
+    case MULTI:
+    case DIV:
+    case MOD:
+    case ASSIGN:
+        return _left->getType();
+    case ADD:
+    case MINUS:
+        break;
+    case BAD:
+        return nullptr;
     }
 
-    while (baseType && (baseType->getTypeId() == TypeId::Ref)) {
-        // todo: baseType = Semantic::getType(_typename);
-    }
-    return baseType;
-}
-
-TypeNode::TypeId
-TypeNode::getTypeId()
-{ 
-    return _typeid;
-}
-
-void
-TypeNode::setConst(bool top)
-{
-    if (top) {
-        _topConst = true;
+    if (_right->getType()->isPointerType()) {
+        return _right->getType();
     } else {
-        _lowConst = true;
+        return _left->getType();
     }
+}
+
+MemberExpr::~MemberExpr()
+{
+    if (_expr) delete _expr;
+}
+
+Type*            
+MemberExpr::getBasicType()
+{
+    if (_expr->syntaxType() == SyntaxType::MemberExpr) {
+        MemberExpr* expr = dynamic_cast<MemberExpr*>(_expr);
+        return expr->getMemberType();
+    } else if (_expr->syntaxType() == SyntaxType::Variable) {
+        VarDef* def = dynamic_cast<Variable*>(_expr)->getDefine();
+        if (def) {
+            return def->getTypeNode()->getType();
+        }
+    }
+    return nullptr;
+}
+
+Type*                
+MemberExpr::getMemberType()
+{
+    Type* type = getBasicType();
+    if (type && type->isStructType()) {
+        return dynamic_cast<StructType*>(type)->memberType(_member);
+    }
+    return nullptr;
+}
+
+Type*
+MemberExpr::getType()
+{
+   return getMemberType(); 
+}
+
+bool
+TypeNode::isResolved()
+{
+    if (_type == nullptr) {
+        return false;
+    }
+    Type* type = _type;
+    while (type->isPointerType() || type->isRefType()) {
+        type = type->getBasicType();
+        if (!type) {
+            return false;
+        }
+    }
+    return true;
 }
 
 }

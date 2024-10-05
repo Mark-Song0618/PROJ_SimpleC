@@ -1,0 +1,38 @@
+.file	"./test.c"
+	.data
+	.section .rodata
+.LC0:
+	.string	"Result: %d,%d "
+	.text
+	.globl	main
+	.type	main,@function
+main:
+pushq	%rbp
+movq	%rsp,	%rbp
+subq	$12,	%rsp
+movq	%rdi,	-4(%rbp)
+movq	%rsi,	-12(%rbp)
+pushq	%rax
+pushq	%rcx
+leaq	-32(%rbp),	%rax
+pushq	%rax
+leaq	.LC0(%rip),	%rax
+movq	%rax,	%rdi
+movl	$0,	%eax
+movq	%rax,	%rsi
+movl	$0,	%eax
+movq	%rax,	%rdx
+callq	printf
+popq	%rcx
+movq	%rax,	0(%ecx)
+movl	$0,	%eax
+jmpq	.Lend_main
+.Lend_main:
+movq	%rbp,	%rax
+addl	$16,	%eax
+movq	%rax,	%rsp
+popq	%rcx
+popq	%rax
+movq	%rbp,	%rsp
+popq	%rbp
+ret

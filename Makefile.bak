@@ -1,0 +1,127 @@
+compile = g++ -g
+compileObj = g++ -g -c -o $@ $<
+irObjs = evaluator.o memRef.o label.o ir.o entity.o constEntry.o irScope.o irGenerator.o irVisitor.o irDumper.o literal.o
+asmObjs = asm.o asmGenerator.o asmDumper.o x86Reg.o x86Generator.o Imm.o
+
+testLexer: ./tests/testLexer.cc myLexer.o utilMsg.o
+	$(compile) -o $@ $^
+
+testFull: ./tests/testParser.cc ./myParser/myParser.hh ./myParser/AstDumper.hh ./myLexer/lexPub.hh ./utils/Exception.hh ./myIR/IRDumper.hh \
+			myLexer.o myParser.o myPProc.o astDumper.o astVisitor.o utilMsg.o ast.o astScope.o type.o typeResolver.o typeChecker.o miscSemantic.o idResolver.o semanAnalyzer.o $(irObjs) $(asmObjs)
+	$(compile) -o $@ ./tests/testParser.cc myLexer.o myParser.o astDumper.o astVisitor.o utilMsg.o ast.o myPProc.o astScope.o type.o typeResolver.o typeChecker.o miscSemantic.o idResolver.o semanAnalyzer.o $(irObjs) $(asmObjs)
+#
+# lexer
+#
+myLexer.o: ./myLexer/myLexer.cc ./myLexer/lexPub.hh ./utils/Fsm.hh ./utils/Msg.hh 
+	$(compileObj)
+#
+# parser
+#
+astDumper.o: ./myParser/AstDumper.cc ./myParser/AstDumper.hh ./myParser/AstVisitor.hh 
+	$(compileObj)
+
+astVisitor.o: ./myParser/AstVisitor.cc ./myParser/AstVisitor.hh ./myParser/astPub.hh
+	$(compileObj)
+
+ast.o: ./myParser/ast.cc ./myParser/astPub.hh 
+	$(compileObj)
+
+astScope.o : ./myParser/Scope.cc ./myParser/Scope.hh
+	$(compileObj)
+
+type.o: ./myParser/type.cc ./myParser/type.hh ./utils/Exception.hh
+	$(compileObj)
+
+myParser.o: ./myParser/myParser.cc ./myParser/astPub.hh ./myParser/myParser.hh ./myPreProc/myPreProc.hh
+	$(compileObj)
+
+#
+# preProcess
+#
+myPProc.o: ./myPreProc/myPreProc.cc ./myPreProc/myPreProc.hh ./myLexer/lexPub.hh ./myParser/astPub.hh ./myParser/myParser.hh
+	$(compileObj)
+
+#
+# semantic
+#
+idResolver.o: ./mySemantic/IdResolver.cc ./mySemantic/IdResolver.hh ./myParser/astPub.hh ./myParser/AstVisitor.hh ./utils/Exception.hh
+	$(compileObj) 
+
+typeResolver.o: ./mySemantic/typeResolver.cc ./mySemantic/typeResolver.hh ./myParser/AstVisitor.hh ./utils/Exception.hh
+	$(compileObj) 
+
+typeChecker.o: ./mySemantic/TypeChecker.cc ./mySemantic/TypeChecker.hh ./myParser/AstVisitor.hh ./utils/Exception.hh
+	$(compileObj) 
+
+miscSemantic.o: ./mySemantic/miscSemantic.cc ./mySemantic/miscSemantic.hh ./myParser/astPub.hh ./myParser/AstVisitor.hh ./utils/Exception.hh
+	$(compileObj) 
+
+semanAnalyzer.o: ./mySemantic/semanAnalyzer.cc ./mySemantic/semanAnalyzer.hh ./myParser/astPub.hh ./mySemantic/IdResolver.hh ./mySemantic/MiscSemantic.hh ./mySemantic/TypeChecker.hh ./mySemantic/typeResolver.hh 
+	$(compileObj) 
+
+# 
+# IR 
+#
+evaluator.o: ./myIR/Evaluator.cc ./myIR/Evaluator.hh ./myIR/IRVisitor.hh ./utils/Exception.hh
+	$(compileObj)
+
+memRef.o: ./myIR/memRef.cc ./myIR/memRef.hh ./myIR/Register.hh
+	$(compileObj)
+
+label.o: ./myIR/label.cc ./myIR/label.hh
+	$(compileObj)
+
+ir.o: ./myIR/ir.cc ./myIR/ir.hh ./myIR/Scope.hh ./myIR/entity.hh ./myIR/constEntry.hh ./myIR/label.hh
+	$(compileObj)
+
+entity.o: ./myIR/entity.cc ./myIR/entity.hh ./myIR/memRef.hh ./myIR/Scope.hh
+	$(compileObj)
+
+constEntry.o: ./myIR/constEntry.cc ./myIR/constEntry.hh 
+	$(compileObj)
+
+irScope.o: ./myIR/Scope.cc ./myIR/Scope.hh ./myIR/entity.hh
+	$(compileObj)
+
+irGenerator.o: ./myIR/IRGenerator.cc ./myIR/IRGenerator.hh ./myIR/ir.hh ./utils/Exception.hh ./myParser/astPub.hh ./myParser/AstVisitor.hh ./myIR/entity.hh
+	$(compileObj)
+
+irVisitor.o : ./myIR/IRVisitor.cc ./myIR/IRVisitor.hh ./myIR/ir.hh
+	$(compileObj)
+
+irDumper.o : ./myIR/IRDumper.cc ./myIR/IRDumper.hh ./myIR/IRVisitor.hh ./myIR/ir.hh
+	$(compileObj)
+
+literal.o: ./myIR/Literal.cc ./myIR/Literal.hh ./myParser/type.hh
+	$(compileObj)
+
+#
+# asm
+#
+Imm.o: ./myAsm/Immediate.cc ./myAsm/Immediate.hh ./myIR/Literal.hh
+	$(compileObj)
+asm.o: ./myAsm/myAsm.cc ./myAsm/myAsm.hh ./myIR/memRef.hh ./myAsm/Immediate.hh ./myAsm/AsmVisitor.hh
+	$(compileObj)
+
+asmGenerator.o: ./myAsm/AsmGenerator.cc ./myAsm/AsmGenerator.hh ./myAsm/myAsm.hh ./myIR/ir.hh ./myIR/IRVisitor.hh 
+	$(compileObj)
+
+asmDumper.o: ./myAsm/AsmDumper.cc ./myAsm/AsmDumper.hh ./myAsm/AsmVisitor.hh ./myAsm/myAsm.hh 
+	$(compileObj)
+
+x86Reg.o: ./myAsm/x86/X86Register.cc ./myAsm/x86/X86Register.hh ./myAsm/Register.hh ./myIR/Register.hh ./utils/Exception.hh ./myIR/Register.hh 
+	$(compileObj)
+
+x86Generator.o: ./myAsm/x86/X86Generator.cc ./myAsm/x86/X86Generator.hh ./myAsm/x86/X86Register.hh ./myAsm/Immediate.hh ./myAsm/AsmGenerator.hh ./myAsm/myAsm.hh ./myIR/Evaluator.hh ./utils/Exception.hh 
+	$(compileObj)
+
+#
+# utils
+#
+utilMsg.o: ./utils/Msg.cc ./utils/Msg.hh
+	$(compileObj)
+
+.PHONY:clean
+clean:
+	rm *.o -f
+	rm testFull testLexer -f

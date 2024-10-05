@@ -1,4 +1,5 @@
 #include "IdResolver.hh"
+#include "../utils/Exception.hh"
 
 
 namespace SEMANTIC
@@ -16,15 +17,12 @@ void
 IdResolver::visit(SYNTAX::FuncDef* n) 
 {
     preAction(n);
-    SYNTAX::AstVisitor::visit(n);
-    postAction(n);
-}
-
-void    
-IdResolver::visit(SYNTAX::VarDef* n)
-{
-    preAction(n);
-    SYNTAX::AstVisitor::visit(n);
+    for (auto param : n->getParams()) {
+        param->accept(this);
+    }
+    for (auto stmt : n->getStmts()) {
+        stmt->accept(this);
+    }
     postAction(n);
 }
 
@@ -47,12 +45,17 @@ IdResolver::preAction(SYNTAX::Program* prog)
 
 template<>
 void    
+IdResolver::postAction(SYNTAX::Program* prog) 
+{
+    _scopeStack.pop();
+}
+
+template<>
+void    
 IdResolver::preAction(SYNTAX::FuncDef* def) 
 {
-    SYNTAX::Scope* scope = new SYNTAX::Scope();
     auto parentScope = _scopeStack.top();
-    parentScope->addChild(scope);
-    scope->setParent(parentScope);
+    auto scope = parentScope->addChild();
     _scopeStack.push(scope);
     def->setScope(scope);
 
@@ -61,10 +64,9 @@ IdResolver::preAction(SYNTAX::FuncDef* def)
 
 template<>
 void    
-IdResolver::preAction(SYNTAX::VarDef* def) 
+IdResolver::postAction(SYNTAX::FuncDef*) 
 {
-    auto scope = _scopeStack.top();
-    scope->defVar(def);
+    _scopeStack.pop();
 }
 
 template<>
@@ -72,24 +74,9 @@ void
 IdResolver::preAction(SYNTAX::ForStmt* fStmt) 
 {
     auto parentScope= _scopeStack.top();
-    SYNTAX::Scope* scope = new SYNTAX::Scope;
-    parentScope->addChild(scope);
-    scope->setParent(parentScope);
+    auto scope = parentScope->addChild();
     fStmt->setScope(scope);
-}
-
-template<>
-void    
-IdResolver::postAction(SYNTAX::Program* prog) 
-{
-    _scopeStack.pop();
-}
-
-template<>
-void    
-IdResolver::postAction(SYNTAX::FuncDef*) 
-{
-    _scopeStack.pop();
+    _scopeStack.push(scope);
 }
 
 template<>
@@ -105,9 +92,7 @@ IdResolver::visit(SYNTAX::IfStmt* ifStmt)
     ifStmt->getCondition()->accept(this);
     SYNTAX::Scope* parentScope = _scopeStack.top();
     if (!ifStmt->getStatements().empty()) {
-        SYNTAX::Scope* scope1 = new SYNTAX::Scope;
-        parentScope->addChild(scope1);
-        scope1->setParent(parentScope);
+        SYNTAX::Scope* scope1 = parentScope->addChild();
         _scopeStack.push(scope1);
         ifStmt->setIfScope(scope1);
         for (auto stmt : ifStmt->getStatements()) {
@@ -116,9 +101,7 @@ IdResolver::visit(SYNTAX::IfStmt* ifStmt)
         _scopeStack.pop();
     }
     if (!ifStmt->getElseStmts().empty()) {
-        SYNTAX::Scope* scope2 = new SYNTAX::Scope;
-        parentScope->addChild(scope2);
-        scope2->setParent(parentScope);
+        SYNTAX::Scope* scope2 = parentScope->addChild();
         _scopeStack.push(scope2);
         ifStmt->setElseScope(scope2);
         for (auto stmt : ifStmt->getElseStmts()) {
@@ -128,37 +111,40 @@ IdResolver::visit(SYNTAX::IfStmt* ifStmt)
     }
 }
 
-void
-IdResolver::visit(SYNTAX::AtomExpr* expr)
+void    
+IdResolver::visit(SYNTAX::VarDef* def) 
+{
+    auto scope = _scopeStack.top();
+    scope->defVar(def);
+    SYNTAX::AstVisitor::visit(def);
+}
+
+void    
+IdResolver::visit(SYNTAX::Variable* var)
 {
     SYNTAX::Scope* currScope = _scopeStack.top();
-    using Type = SYNTAX::AtomExpr::AtomType;
-    switch(expr->getAtomType()) {
-    case Type::Variable: 
-    {
-        auto def = currScope->resolveVar(expr->getIdName());
-        if (def)
-            expr->setVarDef(def);
-        break;
+    auto def = currScope->resolveVar(var->getId());
+    if (def) {
+        var->setVarDef(def);
+    } else {
+        std::string error = "Undefined Variable: " + var->getId();
+        throw UTIL::MyException(error.c_str());
     }
-    case Type::FuncCall:
-    {
-        auto def = currScope->resolveFunction(expr->getFuncCall()->getFuncName());
-        expr->setFuncDef(def);
-        SYNTAX::AstVisitor::visit(expr);
-        break;
+}
+
+void    
+IdResolver::visit(SYNTAX::FuncCall* func)
+{
+    SYNTAX::Scope* currScope = _scopeStack.top();
+    auto def = currScope->resolveFunction(func->funcName());
+    if (!def) {
+        std::string error = "Undefined Function: " + func->funcName();
+        throw UTIL::MyException(error.c_str());
     }
-    case Type::StrLiteral:
-    case Type::FloatLiteral:
-    case Type::IntLiteral:
-        currScope->defLiteral(expr);
-        break;
-    case Type::Parenthesed:
-        SYNTAX::AstVisitor::visit(expr);
-        break;
-    default:
-        break;
-    } 
+    func->setFuncDef(def);
+    for (auto& param : func->getParams()) {
+        param->accept(this);
+    }
 }
 
 }

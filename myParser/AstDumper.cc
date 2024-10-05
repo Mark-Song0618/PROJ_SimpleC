@@ -1,5 +1,7 @@
 #include "AstDumper.hh"
 #include "astPub.hh"
+#include "type.hh"
+#include <string>
 
 namespace SYNTAX {
 
@@ -28,12 +30,6 @@ AstDumper::getDumpStr(BinOpExpr* expr)
         break;
     case BinOpExpr::BinOpType::BITXOR:
         rt += "BIT XOR.";
-        break;
-    case BinOpExpr::BinOpType::DOT:
-        rt += "DOT.";
-        break;
-    case BinOpExpr::BinOpType::POINTER:
-        rt += "POINTER.";
         break;
     case BinOpExpr::BinOpType::SHR:
         rt += "SHIFT RIGHT.";
@@ -114,28 +110,47 @@ void
 AstDumper::visit(ReturnStmt* rt)
 {
     preAction(rt);
-    if (rt->getRetExpr()) {
-        dumpStr("Return Expr:");
-        rt->getRetExpr()->accept(this);
-    }
+    AstVisitor::visit(rt);
     postAction(rt);
+}
+
+void
+AstDumper::visit(ExprStmt* expr)
+{
+    preAction(expr);
+    AstVisitor::visit(expr);
+    postAction(expr);
+}
+
+void
+AstDumper::visit(MemberExpr* expr)
+{
+    preAction(expr);
+    dumpStr("Basic Expr:");
+    AstVisitor::visit(expr);
+    dumpStr("Member: ");
+    dumpStr(expr->getMember());
+    postAction(expr);
 }
 
 void
 AstDumper::visit(FuncDef* node)
 {
     preAction(node);
-    if (node->getRtType()) {
+    if (node->getRetType()) {
         dumpStr("RetType:");
-        node->getRtType()->accept(this);
+        node->getRetType()->accept(this);
     }
-    if (node->getId()) {
-        dumpStr("FuncName:");
-        node->getId()->accept(this);
-    }
+    dumpStr("FuncName:");
+    dumpStr(node->getName());
     for (auto param : node->getParams()) {
         dumpStr("Param:");
         param->accept(this);
+    }
+    if (node->isVarArg()) {
+        ++_level;
+        dumpStr("Var Args");
+        --_level;
     }
     if (!node->getStmts().empty())
     {
@@ -151,10 +166,7 @@ void
 AstDumper::visit(StructDef* node)
 {
     preAction(node);
-    if (node->getId()) {
-        dumpStr("StructName:");
-        node->getId()->accept(this);
-    } 
+    dumpStr("StructName:" + node->getName());
     if (!node->getmembers().empty()) {
         dumpStr("Struct Member:");
         for (auto mem: node->getmembers()) {
@@ -173,10 +185,7 @@ AstDumper::visit(VarDef* node)
         node->getTypeNode()->accept(this);
     }
 
-    if (node->getId()) {
-        dumpStr("VarName:");
-        node->getId()->accept(this);
-    }
+    dumpStr("VarName:" + node->getId());
 
     if (node->getInit()) {
         dumpStr("Var InitVal:");
@@ -192,10 +201,9 @@ AstDumper::visit(TypeDef* node)
     if (node->getOrigType()) {
         dumpStr("Defined:");
         node->getOrigType()->accept(this);
-        if (node->getDefinedType()) {
-            dumpStr("To:");
-            node->getDefinedType()->accept(this);
-        }
+        dumpStr("To:");
+        dumpStr(node->getDefinedType());
+
     }
     postAction(node);
 }
@@ -253,36 +261,6 @@ AstDumper::visit(ForStmt* node)
 }
 
 void
-AstDumper::visit(AssignStmt* node)
-{
-    if (!node->getLhs()) return;
-    if (!node->getRhs()) {
-        node->getLhs()->accept(this);
-        return;
-    }
-    preAction(node);
-    dumpStr("Assign:");
-    node->getLhs()->accept(this);
-    dumpStr("To:");
-    node->getRhs()->accept(this);
-    postAction(node);
-}
-
-void
-AstDumper::visit(FuncCall* node)
-{
-    preAction(node);
-    dumpStr("FuncName: " + node->getFuncName());
-    if (!node->getParams().empty())
-    {
-        dumpStr("param:");
-        for (auto expr : node->getParams())
-            expr->accept(this);
-    }
-    postAction(node);
-}
-
-void
 AstDumper::visit(InclStmt* node)
 {
     preAction(node);
@@ -291,53 +269,77 @@ AstDumper::visit(InclStmt* node)
 }
 
 void
-AstDumper::visit(AtomExpr* node)
+AstDumper::visit(FuncCall* node)
 {
-    switch (node->getAtomType()) {
-    case AtomExpr::AtomType::Variable:
-        dumpStr("Variable:");
-        dumpStr(node->getIdName() + "");
-        if (node->getVarDef()) {
-            std::string defInfo = " refered to ";
-            defInfo += "Line: ";
-            defInfo += std::to_string(node->getVarDef()->getLine());
-            defInfo += ", Col: ";
-            defInfo += std::to_string(node->getVarDef()->getCol());
-            defInfo += ".";
-            dumpStr(defInfo);
-        }
-        break;
-    case AtomExpr::AtomType::FuncCall:
-        node->getFuncCall()->accept(this); 
-        if (node->getFuncDef()) {
-            std::string defInfo = " refered to ";
-            defInfo += "Line: ";
-            defInfo += std::to_string(node->getFuncDef()->getLine());
-            defInfo += ", Col: ";
-            defInfo += std::to_string(node->getFuncDef()->getCol());
-            defInfo += ".";
-            dumpStr("");
-        }
-        break;
-    case AtomExpr::AtomType::StrLiteral:
-        dumpStr("String Literal:");
-        dumpStr(node->getString() + "");
-        break;
-    case AtomExpr::AtomType::FloatLiteral:
-        dumpStr("Float Literal:");
-        dumpStr(std::to_string(node->getFloat()) + "");
-        break;
-    case AtomExpr::AtomType::Parenthesed:
-        dumpStr("Parenthesed Expr:");
-        node->getParenthesed()->accept(this); 
-        break;
-    case AtomExpr::AtomType::IntLiteral:
-        dumpStr("Int Literal:");
-        dumpStr(std::to_string(node->getInt()) + "");
-        break;
-    default:
-        break;
+    preAction(node);
+    dumpStr("FuncName: " + node->funcName());
+    if (!node->getParams().empty())
+    {
+        dumpStr("param:");
+        for (auto expr : node->getParams())
+            expr->accept(this);
     }
+    if (node->getFuncDef()) {
+        std::string defInfo = " refered to ";
+        defInfo += "Line: ";
+        defInfo += std::to_string(node->getFuncDef()->getLine());
+        defInfo += ", Col: ";
+        defInfo += std::to_string(node->getFuncDef()->getCol());
+        defInfo += ".";
+        dumpStr("");
+    }
+    postAction(node);
+}
+
+
+void
+AstDumper::visit(Variable* node)
+{
+    dumpStr("Variable:");
+    dumpStr(node->getId() + "");
+    if (node->getDefine()) {
+        std::string defInfo = " refered to ";
+        defInfo += "Line: ";
+        defInfo += std::to_string(node->getDefine()->getLine());
+        defInfo += ", Col: ";
+        defInfo += std::to_string(node->getDefine()->getCol());
+        defInfo += ".";
+        dumpStr(defInfo);
+    }
+}
+
+
+void
+AstDumper::visit(StrLiteral* node)
+{
+        dumpStr("String Literal:");
+        dumpStr(node->getLiteral());
+}
+void
+AstDumper::visit(IntLiteral* node)
+{
+        dumpStr("Int Literal:");
+        dumpStr(std::to_string(node->getLiteral()));
+}
+void
+AstDumper::visit(FloatLiteral* node)
+{
+        dumpStr("Float Literal:");
+        dumpStr(std::to_string(node->getLiteral()));
+}
+
+
+void
+AstDumper::visit(Parenthesed* node)
+{
+    dumpStr("Parenthesed Expr:");
+    node->getExpr()->accept(this); 
+}
+
+void
+AstDumper::visit(Keyword* node)
+{
+    dumpStr("Keyword: " + node->getKeyword());
 }
 
 void
@@ -374,8 +376,8 @@ AstDumper::visit(UniOpExpr* expr)
     default:
         break;
     }
-    if (expr->getFactor()) {
-        expr->getFactor()->accept(this);
+    if (expr->getExpr()) {
+        expr->getExpr()->accept(this);
     }
 }
 
@@ -399,66 +401,78 @@ void
 AstDumper::visit(TypeNode* node)
 {
     preAction(node);
-    std::string str = "Type:";
-    if (node->isLowConst()) {
-        str += " Const";
-    }
-    switch (node->getTypeId()) {
-    case TypeNode::TypeId::TypeRef:
-        str += node->getTypeRefName();
-        if (node->getTypeDef()) {
-            str = "refered to typeDef: ";
-            str += "Line: ";
-            str += std::to_string(node->getTypeDef()->getLine());
-            str += ", Col: ";
-            str += std::to_string(node->getTypeDef()->getCol());
-        }
-        break;
-    case TypeNode::TypeId::VOID:
-        str += " void";
-        break;
-    case TypeNode::TypeId::BOOL:
-        str += " bool";
-        break;
-    case TypeNode::TypeId::CHAR:
-        str += " char";
-        break;
-    case TypeNode::TypeId::SHORT:
-        str += " short";
-        break;
-    case TypeNode::TypeId::INT:
-        str += " int";
-        break;
-    case TypeNode::TypeId::FLOAT:
-        str += " float";
-        break;
-    case TypeNode::TypeId::DOUBLE:
-        str += " double";
-        break;
-    case TypeNode::TypeId::Ref:
-        if (node->isTopConst()) 
-            str += "Const";
-        str += " ref";
-        break;
-    case TypeNode::TypeId::Pointer:
-        if (node->isTopConst()) 
-            str += "Const";
-        str += " pointer";
-        break;
-    default:
-        break;
-    }
-    dumpStr(str);
 
-    if (node->getTypeId() == TypeNode::TypeId::Ref) {
-        if (node->getBasicType())
-            node->getBasicType(true)->accept(this);
-    }
-    if (node->getTypeId() == TypeNode::TypeId::Pointer) {
-        if (node->getBasicType())
-            node->getBasicType(true)->accept(this);
+    if (node->isResolved()) {
+        dumpType(node->getType());
+    } else {
+        dumpTypeRef(node->getTypeRef());
     }
 
     postAction(node);
 }
+
+void    
+AstDumper::dumpType(Type* type)
+{
+    std::string str = "Type: ";
+    if (type->isConst()) {
+        str += "const ";
+    }
+
+    if (type->isBasicType()) {
+        switch (dynamic_cast<BasicType*>(type)->getTypeId()) {
+        case BasicType::TypeId::VOID:
+            str += "VOID";
+            break;
+        case BasicType::TypeId::CHAR:
+            str += "CHAR";
+            break;
+        case BasicType::TypeId::SHORT:
+            str += "SHORT";
+            break;
+        case BasicType::TypeId::INT:
+            str += "INT";
+            break;
+        case BasicType::TypeId::FLOAT:
+            str += "FLOAT";
+            break;
+        case BasicType::TypeId::DOUBLE:
+            str += "DOUBLE";
+            break;
+        default:
+            // exception
+            break;
+        }
+        dumpStr(str);
+    } else if (type->isPointerType()) {
+        str += "Pointer of\n";
+        dumpStr(str);
+        PointerType* pointer = dynamic_cast<PointerType*>(type); 
+        if (pointer->getBasicType()) {
+            dumpType(pointer->getBasicType());
+        } else if (pointer->getBasicTypeRef()) {
+            dumpTypeRef(pointer->getBasicTypeRef());
+        }
+    } else if (type->isRefType()) {
+        str += "Reference of\n ";
+        dumpStr(str);
+        RefType* ref = dynamic_cast<RefType*>(type); 
+        if (ref->getBasicType()) {
+            dumpType(ref->getBasicType());
+        } else if (ref->getBasicTypeRef()) {
+            dumpTypeRef(ref->getBasicTypeRef());
+        }
+    } else {
+        // exception
+    }
+}
+
+void    
+AstDumper::dumpTypeRef(TypeRef* ref)
+{
+    std::string str = "TypeRef: ";
+    str += ref->getName();
+    dumpStr(str);
+}
+
 }

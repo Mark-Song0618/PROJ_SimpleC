@@ -36,7 +36,6 @@ enum class TokenType {
     TYPEDEF,
     INCLUDE,
     VOID,       
-    BOOL,
     CHAR,
     SHORT,
     INT,        
@@ -44,14 +43,13 @@ enum class TokenType {
     FLOAT,
     DOUBLE,
     STRUCT,
+    VARPARAMS,
 
     // operands 
     ID,
     INTEGERLITERAL,
     FLOATLITERAL,
     STRLITERAL,
-    TRUE,
-    FALSE,
 
     // operators
     ADD,
@@ -134,7 +132,11 @@ enum class LexState {
     BRACKETR,
     BRACEL,
     BRACER,
+
+    PROCESSDOT,
     DOT,
+    VARPARAMS,
+
     COMMA,
     SEMICOLON,
     SHARP,
@@ -192,16 +194,16 @@ public:
     std::string         dump();
 
 private:
-    TokenType           _type;
+    TokenType                                   _type;
 
     std::variant<std::string, float, long long> _value;
 
-    Cursor              _linefile;
+    Cursor                                      _linefile;
 };
 
 class MyLexer final : public UTIL::FsmBase<LexState, char> {
 public:
-    MyLexer() { initFsmHandlers(); }
+    MyLexer() : _output(nullptr), _input(nullptr), _peekPos(1) { initFsmHandlers(); }
 
     ~MyLexer() {
         if (_output) {
@@ -221,6 +223,9 @@ public:
     void    initFsmHandlers();
 
     int     scan(std::string filePath); 
+
+    std::string 
+            srcFile() { return _srcFile; } 
 
     int     setOutput(std::string outputFile);
 
@@ -291,6 +296,8 @@ private:
 
     void    atOr(char);
 
+    void    atDOT(char);
+
     void    errorHandler();
 
     void    absorb(char c);
@@ -306,11 +313,15 @@ private:
 
     bool     _absorbed;
 
+    std::string _srcFile;
+
     std::string _cache;
 
     std::vector<Token> _peek;
 
     size_t   _peekPos; // the pos after the first token
+
+    char    _c;
 
     static std::map<std::string, TokenType> _kwStr2Type;
 

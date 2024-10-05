@@ -19,9 +19,11 @@ Scope::resolveVar(std::string name)
 FuncDef*      
 Scope::resolveFunction(std::string name)
 {
-    if (_defFuncs.find(name) != _defFuncs.end()) {
-        return _defFuncs[name];
-    } else if (_parent) {
+    for (auto p : _defFuncs) {
+        if (p.first == name)
+            return p.second;
+    }
+    if (_parent) {
         return _parent->resolveFunction(name);
     }
     return nullptr;
@@ -31,19 +33,42 @@ Scope::resolveFunction(std::string name)
 void              
 Scope::defVar(VarDef* def)
 {
-    _defVars.insert({def->getId()->getIdName(), def});
+    _defVars.insert({def->getId(), def});
 }
 
 void                
 Scope::defFunc(FuncDef* def)
 {
-    _defFuncs.insert({def->getId()->getIdName(), def});
+    _defFuncs.push_back({def->getName(), def});
 }
 
-void 
-Scope::defLiteral(AtomExpr* litExpr)
+std::vector<VarDef*>
+Scope::getVariables()
 {
-    _literals.push_back(litExpr);
+    std::vector<VarDef*> rt;
+    for (auto [_, def] : _defVars) {
+            rt.push_back(def);
+    }
+    return rt;
+}
+
+std::vector<FuncDef*>
+Scope::getFunctions()
+{
+    std::vector<FuncDef*> rt;
+    for (auto [_, def] : _defFuncs) {
+            rt.push_back(def);
+    }
+    return rt;
+}
+
+Scope*
+Scope::addChild()
+{
+    Scope* child = new Scope();
+    child->setParent(this);
+    addChild(child);
+    return child;
 }
 
 }

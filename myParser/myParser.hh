@@ -17,7 +17,7 @@ public:
 
     LEX::TokenType          keywordType() const { return _kw; } 
 
-    SyntaxType              syntaxType() const { return _node->type(); }
+    SyntaxType              syntaxType() const { return _node->syntaxType(); }
 
     TreeNode*               getNode() {return _node;}
 
@@ -41,14 +41,14 @@ public:
 
     bool                    parse();
 
+    std::string             srcFile() { return _lexer->srcFile(); }
+
     Program*                getResult();
 
 private:
     void                    init();
 
     bool                    hasMoreToken();
-
-    bool                    rdp();
 
     bool                    absorb(LEX::TokenType token);
 
@@ -59,23 +59,27 @@ private:
     void                    errorHandler(const std::string& = "");
 
     template<typename T>
-    bool                    production();
+    T*                      production();
 
-    bool                    processOr(BinOpExpr*);
-    bool                    processAnd(BinOpExpr*);
-    bool                    processRel(BinOpExpr*);
-    bool                    processBOR(BinOpExpr*);
-    bool                    processBXOR(BinOpExpr*);
-    bool                    processBAND(BinOpExpr*);
-    bool                    processShift(BinOpExpr*);
-    bool                    processADD(BinOpExpr*);
-    bool                    processMul(BinOpExpr*);
-    bool                    processMember(BinOpExpr*);
-    bool                    processAssign(BinOpExpr*);
+    Expr*                   productUniOp();
+
+    Expr*                   productOr();
+    Expr*                   productAnd();
+    Expr*                   productRel();
+    Expr*                   productBOR();
+    Expr*                   productBXOR();
+    Expr*                   productBAND();
+    Expr*                   productShift();
+    Expr*                   productADD();
+    Expr*                   productMul();
+    Expr*                   productMember();
+    Expr*                   productAssign();
+    Expr*                   productFactor();
 
     Statement*              selectStmt();
 
     bool                    isType(LEX::TokenType token);
+    bool                    isPostfix();
 
 private:
     LEX::MyLexer*           _lexer;
@@ -87,6 +91,12 @@ private:
     std::stack<SyntaxNode>  _symbols;
 };
 
+template<>
+VarDef*
+MyParser::production<VarDef>();
 
+template<>
+TypeNode*
+MyParser::production<TypeNode>();
 
 }

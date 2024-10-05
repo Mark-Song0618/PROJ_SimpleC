@@ -3,6 +3,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include "type.hh"
 #include "Scope.hh"
 
 /* supported grammers :
@@ -13,11 +14,14 @@
  *					FuncDef <;>		|
  *					StructDef <;>   |
  *                  TypeDef         |
- *					FuncCall <;>	|
- *					Assignment <;>	|
+ *					ExprStmt<;>	    |
  *					IfStmt <;>      |
  *					ForStmt <;>		|
+ *					BreakStmt <;>	|
+ *					ContinueStmt <;>|
  *					InclStmt
+ *
+ * ExprStmt     :=  Expr;
  *
  * FuncDef		:=	TypeNode <id> <(> [VarDef (<,> VarDef)*] <)> <{> [Statement]* <}>
  * 
@@ -31,11 +35,9 @@
  * 
  * ForStmt      :=	<for> <(> (VarDef) <;> Expr <;> [Statement]* <)> <{> [Statement]* <}>
  *
- * FuncCall		:= <id> <(> [Expr [,Expr]*]<)>
- *
  * InclStmt     :=  INCLUDE "<" PATH ">" 
  * 
- * AssignExpr   := Assignment
+ * Expr          := Assignment
  *
  * Assignment	:= Expr9 [ <=> AssignExpr]
  *
@@ -66,7 +68,7 @@
  *
  * Factor       := Atom [MembOp Factor]*
  *
- * Atom         :=	<id> | <Literal> | FuncCallExpr | <(> Expr <)> | <kwyword>  
+ * Atom         :=	<id> | <Literal> | FuncCall | <(> Expr <)> | <kwyword>  
  *
  * RelOp        := ">" | "<" | ">=" | <<=> | "==" | "!="
  * 
@@ -82,17 +84,18 @@
  *
  * MembOp       := "->" | <.>
  *
- * TypeNode     := BaseType | TypeRef | TypePointer | ConstType | Reference 
+ * FuncCall		:= <id> <(> [Expr [,Expr]*]<)>
+ *
+ * donot support top-level const for now
+ * TypeNode     := [const] (BaseType | TypeRef | TypePointer | TypeReference) 
  *
  * BaseType     := <void> | <char> | <short> | <int> | <float> | <double> | StructDef 
  *
  * TypeRef      := [struct] <id>
  *
- * TypePointer  := <*> TypeNode 
+ * TypePointer  := TypeNode <*> 
  *
- * ConstType    := <const> TypeNode 
- *
- * Reference    := <&> TypeNode 
+ * TypeReference:= TypeNode <&> 
  *
  */
 
@@ -111,8 +114,9 @@ enum class SyntaxType
     TypeDef,
     IfStmt,
     ForStmt,
-    Assignment,
-    FuncCall,
+    BreakStmt,
+    ContinueStmt,
+    ExprStmt,
     InclStmt,
 
     // type 
@@ -120,8 +124,18 @@ enum class SyntaxType
 
     // Expr 
     AtomExpr,
+    Variable,
+    FuncCall,
+    StrLiteral,
+    IntLiteral,
+    FloatLiteral,
+    ParenExpr,
+    Keyword,
+
     UniOpExpr,
+
     BinOpExpr,
+    MemberExpr,
     //SelectExpr,
 
     Dummy
@@ -136,13 +150,18 @@ class VarDef;
 class TypeDef;
 class IfStmt;
 class ForStmt;
-class Assignment;
-class FuncCall;
+class BreakStmt;
+class ContinueStmt;
 class InclStmt;
 class Expr;
 class AtomExpr;
+class FuncCall;
+class Variable;
+class IntLiteral;
+class StrLiteral;
 class UniOpExpr;
 class BinOpExpr;
+class MemberExpr;
 //class SelectExpr;
 class TypeNode;     // the node contains type info
 class AstVisitor;
@@ -150,6 +169,7 @@ class AstVisitor;
 using StmtVec   = std::vector<Statement*>;
 using ExprVec   = std::vector<Expr*>;
 using VarDefVec = std::vector<VarDef*>;
+using FuncVec = std::vector<FuncDef*>;
 using InclStmts = std::map<std::string, StmtVec>;
 
 class TreeNode {
@@ -158,30 +178,26 @@ public:
 
     virtual std::string     getClassInfo() = 0;
 
-    TreeNode(SyntaxType type) : _type(type), _parent(nullptr), _scope(nullptr), _stage(0) {}
+    TreeNode(SyntaxType type) : _syntaxType(type), _parent(nullptr), _scope(nullptr) {}
 
     virtual ~TreeNode() { if (_scope) delete _scope; } 
 
-    SyntaxType              type(); 
+    SyntaxType              syntaxType() { return _syntaxType; } 
 
     virtual bool            isStatement() { return false; }
 
     virtual bool            isExpr() { return false; }
 
-    int                     currStage() { return _stage; }
-
-    void                    setStage(int stage) { _stage = stage; }
-
     void                    setScope(Scope* s) { _scope = s; }
 
+    Scope*                  getScope() { return _scope; }
+
 protected:
-    SyntaxType              _type;
+    SyntaxType              _syntaxType;
 
     TreeNode*               _parent;
 
     Scope*                  _scope;
-
-    int                     _stage;
 };
 
 class Program final: public TreeNode
@@ -195,13 +211,25 @@ public:
 
     virtual ~Program();
 
+    void                    setSrcFile(const std::string& file) { _srcFile = file; }
+
+    std::string             srcFile() { return _srcFile; }
+
     void                    addStatement(Statement* stmt);
+
+    void                    addStatements(std::vector<Statement*> stmts);
 
     StmtVec                 getStatements() { return _stmts; }
 
     StmtVec                 fetchStatements(); 
 
+    FuncVec                 getFuncs();
+
+    VarDefVec               getGlobalVars();
+
 private:
+    std::string             _srcFile;
+
     StmtVec                 _stmts;
 
     InclStmts               _includeFiles; 
@@ -219,6 +247,8 @@ public:
 
     bool                    isStatement() override { return true; }
 
+    virtual bool            isBlock() { return false; }
+
     void                    setLine(int line, int col) { _line = line; _col = col;}
 
     size_t                  getLine() { return _line; }
@@ -234,7 +264,7 @@ private:
 class InclStmt : public Statement 
 {
 public:
-    virtual void            accept(AstVisitor*);
+    virtual void            accept(AstVisitor*) override;
 
     std::string             getClassInfo() override { return "InclStmt"; }
 
@@ -252,7 +282,7 @@ private:
 class ReturnStmt : public Statement
 {
 public:
-    virtual void            accept(AstVisitor*);
+    virtual void            accept(AstVisitor*) override;
 
     std::string             getClassInfo() override { return "ReturnStmt"; }
 
@@ -269,7 +299,7 @@ private:
 class FuncDef final: public Statement 
 {
 public:
-    virtual void            accept(AstVisitor*);
+    virtual void            accept(AstVisitor*) override;
 
     std::string             getClassInfo() override { return "FunDef"; }
 
@@ -277,9 +307,15 @@ public:
 
     virtual ~FuncDef();
 
-    void                    setId(AtomExpr* id) { _id = id; }
+    bool                    isBlock() override { return true; }
 
-    void                    setType(TypeNode* type) { _rtType = type; }
+    void                    setFuncName(const std::string& name) { _name = name; }
+
+    std::string             getName() { return _name; }
+
+    void                    setRetType(TypeNode* type) { _rtType = type; }
+
+    TypeNode*               getRetType() { return _rtType; }
 
     void                    addParam(VarDef*);
 
@@ -289,31 +325,33 @@ public:
 
     bool                    isDefined() { return _defined;}
 
-    TypeNode*               getRtType() { return _rtType; }
-
-    AtomExpr*               getId() { return _id; }
-
     const VarDefVec&        getParams() { return _params; }
 
     const StmtVec&          getStmts() { return _stmts; }
 
+    void                    setVarArg() { _varArg = true; }
+
+    bool                    isVarArg() { return _varArg; }
+
 private:
     TypeNode*               _rtType;
 
-    AtomExpr*               _id;
+    std::string             _name;
 
     VarDefVec               _params;
 
     StmtVec                 _stmts;
 
     bool                    _defined;
+
+    bool                    _varArg;
 };
 
 
 class StructDef final: public Statement 
 {
 public:
-    virtual void            accept(AstVisitor*);
+    virtual void            accept(AstVisitor*) override;
     
     std::string             getClassInfo() override { return "StructDef"; }
 
@@ -321,7 +359,7 @@ public:
 
     virtual ~StructDef();
 
-    void                    setId(AtomExpr* id) { _id = id; }
+    void                    setName(std::string name) { _name = name; }
 
     void                    addMember(VarDef*);
 
@@ -329,12 +367,14 @@ public:
 
     bool                    isDefined() { return _defined;}
 
-    AtomExpr*               getId() { return _id; }
+    std::string             getName() { return _name; }
 
     const VarDefVec&        getmembers() { return _members;}
 
+    StructType*             extractType();
+
 private:
-    AtomExpr*               _id;
+    std::string             _name;
 
     VarDefVec               _members;
     
@@ -345,7 +385,7 @@ private:
 class VarDef final: public Statement 
 {
 public:
-    virtual void            accept(AstVisitor*);
+    virtual void            accept(AstVisitor*) override;
 
     std::string             getClassInfo() override { return "VarDef"; }
 
@@ -353,7 +393,7 @@ public:
 
     virtual ~VarDef();
 
-    void                    setId(AtomExpr* id) { _id = id; }
+    void                    setId(const std::string& id) { _id = id; }
 
     void                    setType(TypeNode* type) { _type = type; }
 
@@ -361,14 +401,16 @@ public:
 
     TypeNode*               getTypeNode() { return _type; }
 
-    AtomExpr*               getId() { return _id; }
+    std::string             getId() { return _id; }
 
     Expr*                   getInit() { return _initVal; }
+
+    unsigned                size(); 
 
 private:
     TypeNode*               _type;
 
-    AtomExpr*               _id;
+    std::string             _id;
 
     Expr*                   _initVal;
 };
@@ -376,7 +418,7 @@ private:
 class TypeDef final: public Statement 
 {
 public:
-    virtual void            accept(AstVisitor*);
+    virtual void            accept(AstVisitor*) override;
 
     std::string             getClassInfo() override { return "TypeDef"; }
 
@@ -386,28 +428,30 @@ public:
 
     void                    setOrigType(TypeNode*);
 
-    void                    setdefinedType(AtomExpr* id) { _id = id;}
+    void                    setDefinedType(const std::string& id) { _id = id;}
 
     TypeNode*               getOrigType() { return _type; }
 
-    AtomExpr*               getDefinedType() { return _id; }
+    std::string             getDefinedType() { return _id; }
 
 private:
     TypeNode*               _type;
 
-    AtomExpr*               _id;
+    std::string             _id;
 };
 
 class IfStmt final: public Statement 
 {
 public:
-    virtual void            accept(AstVisitor*);
+    virtual void            accept(AstVisitor*) override;
 
     std::string             getClassInfo() override { return "IfStmt"; }
 
     IfStmt();
 
     virtual ~IfStmt();
+
+    bool                    isBlock() override { return true; }
 
     void                    setCondition(Expr*);
 
@@ -437,41 +481,18 @@ private:
     Scope*                  _eScope;
 };
 
-class AssignStmt final: public Statement 
-{
-public:
-    virtual void            accept(AstVisitor*);
-
-    std::string             getClassInfo() override { return "AssignStmt"; }
-
-    AssignStmt();
-
-    virtual ~AssignStmt();
-
-    void                    addLhs(Expr*);
-
-    void                    addRhs(Expr*);
-
-    Expr*                   getLhs() { return _left; }
-
-    Expr*                   getRhs() { return _right; }
-
-private:
-    Expr*                   _left;
-
-    Expr*                   _right;
-};
-
 class ForStmt final: public Statement 
 {
 public:
-    virtual void            accept(AstVisitor*);
+    virtual void            accept(AstVisitor*) override;
 
     std::string             getClassInfo() override { return "ForStmt"; }
     
     ForStmt();
 
     virtual ~ForStmt();
+
+    bool                    isBlock() override { return true; }
 
     void                    addInit(VarDef*);
 
@@ -499,29 +520,41 @@ private:
     StmtVec                 _body;
 };
 
-class FuncCall final: public Statement 
+class BreakStmt final : public Statement
 {
 public:
-    virtual void            accept(AstVisitor*);
+    virtual void            accept(AstVisitor* visitor) override; 
 
-    std::string             getClassInfo() override { return "FuncCall"; }
+    std::string             getClassInfo() override { return "Break Statement"; }
+        
+    BreakStmt() : Statement(SyntaxType::BreakStmt) {}
+};
 
-    FuncCall();
+class ContinueStmt final : public Statement
+{
+public:
+    virtual void            accept(AstVisitor* visitor) override; 
 
-    virtual ~FuncCall();
+    std::string             getClassInfo() override { return "Continue Statement"; }
 
-    void                    setName(const std::string&);
+    ContinueStmt() : Statement(SyntaxType::ContinueStmt) {}
+};
 
-    std::string             getFuncName() { return _funcName; }
+class ExprStmt : public Statement
+{
+public:
+    ExprStmt() : Statement(SyntaxType::ExprStmt), _expr(nullptr) {}
 
-    void                    addParam(Expr*);
+    virtual void            accept(AstVisitor* visitor) override; 
 
-    const ExprVec&          getParams() { return _params; }
+    std::string             getClassInfo() override { return "Expr Statement"; }
+
+    void                    setExpr(Expr* expr) { _expr = expr; }
+
+    Expr*                   getExpr() { return _expr; }
 
 private:
-    std::string             _funcName;
-
-    ExprVec                 _params;
+    Expr*                   _expr;
 };
 
 /********************************************************************************
@@ -539,89 +572,212 @@ public:
     virtual ~Expr() {}
 
     bool                    isExpr() override { return true; }
+
+    virtual Type*           getType() = 0; 
+
+    virtual unsigned        size() = 0;
+
+    virtual void            setType(Type* type) {} 
+
+    virtual bool            isLhs() { return false; }
+
+    // an expr is loadable when:
+    //  1. it is a lhs, and 
+    //  2. it is not an array
+    virtual bool            isLoadable() { return false; }
+    //
+    // an expr is assignable when:
+    //  1. it is a lhs, and 
+    //  2. it is not const 
+    virtual bool            isAssignale() { return false; }
+
 };
 
 
-class AtomExpr: public Expr
+class AtomExpr : public Expr
 {
 public:
-    enum class AtomType
-    {
-        Variable,
-        FuncCall,
-        StrLiteral,
-        IntLiteral,
-        FloatLiteral,
-        Parenthesed,
-        Keyword,
-        Bad,
-    };
+    AtomExpr(SyntaxType type) :Expr(type) {}
+
+};
+
+class Variable : public AtomExpr 
+{
+public:
+    virtual void            accept(AstVisitor*) override;
+
+    std::string             getClassInfo() override { return "Variable"; }
+
+    Variable() : AtomExpr(SyntaxType::Variable) {}
+
+    void                    setId (const std::string& id) { _id = id; }
+
+    std::string             getId() { return _id; }
+
+    void                    setVarDef(VarDef* defVar) { _defVar = defVar; }
+
+    VarDef*                 getDefine() { return _defVar; }
+
+    bool                    isLhs() override { return true; }
+
+    bool                    isAssignale() override; // depend on type  
+
+    bool                    isLoadable() override; 
+
+    Type*                   getType() override;
+
+    unsigned                size() override { return _defVar->size(); } 
 
 public:
-    virtual void            accept(AstVisitor*);
+    std::string             _id;
 
-    std::string             getClassInfo() override { return "AtomExpr"; }
+    VarDef*                 _defVar;
+};
 
-    AtomExpr() : Expr(SyntaxType::AtomExpr), _AtomType(AtomType::Bad), _defVar(nullptr), _defFunc(nullptr) {}
+class FuncCall : public AtomExpr 
+{
+public:
+    virtual void            accept(AstVisitor*) override;
 
-    AtomExpr(AtomType type) :Expr(SyntaxType::AtomExpr), _AtomType(type), _defVar(nullptr), _defFunc(nullptr) {}
+    std::string             getClassInfo() override { return "FuncCall"; }
 
-    virtual ~AtomExpr();
+    FuncCall() : AtomExpr(SyntaxType::FuncCall) {}
 
-    void                    setVar(const std::string& id) { _id = id; }
+    ~FuncCall();
 
-    void                    setKeyword(const std::string kw) { _kw = kw; }
+    void                    addParam(Expr*);
 
-    void                    setFuncCall(FuncCall* func) { _func = func; }
+    void                    addParams(ExprVec*);
 
-    void                    setLiteral(long long liter) { _intLiteral = liter; }
+    const ExprVec&          getParams() { return _params; }
 
-    void                    setLiteral(float liter) { _floatLiteral = liter; }
+    void                    setFuncName(const std::string& name) { _funcName = name; }
 
-    void                    setLiteral(std::string liter) { _strLiteral = liter; }
+    std::string             funcName() { return _funcName; }
 
-    void                    setExpr(Expr* expr) { _parenthesedExpr = expr; }
-
-    void                    setType(AtomType type) { _AtomType = type; }
-
-    AtomType                getAtomType() { return _AtomType; }
-
-    FuncCall*               getFuncCall() { return _func; }
-
-    Expr*                   getParenthesed() { return _parenthesedExpr; }
-
-    std::string             getIdName() { return _id; }
-
-    std::string             getString() { return _strLiteral; }
-
-    float                   getFloat() { return _floatLiteral; }
-
-    long long               getInt() { return _intLiteral; }
-
-    std::string             getKeyword() { return _kw; }
-
-    // resolved var
-    void                    setVarDef(VarDef* def) { _defVar = def; }
-
-    VarDef*                 getVarDef() { return _defVar; }
-
-    // resolved func
     void                    setFuncDef(FuncDef* def) { _defFunc = def; }
 
     FuncDef*                getFuncDef() { return _defFunc; }
 
+    Type*                   getType() override;
+
+    unsigned                size() override;
+
 private:
-    AtomType                _AtomType;
-    std::string             _id;
-    std::string             _strLiteral;
-    long long               _intLiteral;
-    float                   _floatLiteral;
-    FuncCall*               _func;
-    Expr*                   _parenthesedExpr;
-    std::string             _kw;
-    VarDef*                 _defVar;
+    std::string             _funcName;
+
+    ExprVec                 _params;
+
     FuncDef*                _defFunc;
 };
+
+class StrLiteral : public AtomExpr 
+{
+public:
+    virtual void            accept(AstVisitor*) override;
+
+    std::string             getClassInfo() override { return "StrLiteral"; }
+
+    StrLiteral() : AtomExpr(SyntaxType::StrLiteral) {}
+
+    void                    setLiteral(std::string liter) { _strLiteral = liter; }
+
+    std::string             getLiteral() { return _strLiteral; }
+
+    Type*                   getType() override; 
+
+    unsigned                size() override { return getType()->size(); }
+
+private:
+    std::string             _strLiteral;
+};
+
+class IntLiteral : public AtomExpr 
+{
+public:
+    virtual void            accept(AstVisitor*) override;
+
+    std::string             getClassInfo() override { return "IntLiteral"; }
+
+    IntLiteral() : AtomExpr(SyntaxType::IntLiteral) {}
+
+    void                    setLiteral(int liter) { _intLiteral = liter; }
+
+    int                     getLiteral() { return _intLiteral; }
+
+    Type*                   getType() override { return TypeTable::getType("int"); } 
+
+    unsigned                size() override { return getType()->size(); }
+
+private:
+    int                     _intLiteral;
+
+};
+
+class FloatLiteral : public AtomExpr 
+{
+public:
+    virtual void            accept(AstVisitor*) override;
+
+    std::string             getClassInfo() override { return "FloatLiteral"; }
+
+    FloatLiteral() : AtomExpr(SyntaxType::FloatLiteral) {}
+
+    void                    setLiteral(float liter) { _literal = liter; }
+
+    Type*                   getType() override { return TypeTable::getType("float"); } 
+
+    float                   getLiteral() { return _literal; }
+
+    unsigned                size() override { return getType()->size(); } 
+
+private:
+    float                   _literal;
+
+};
+
+class Parenthesed : public AtomExpr 
+{
+public:
+    virtual void            accept(AstVisitor*) override;
+
+    std::string             getClassInfo() override { return "Parenthesed Expr"; }
+
+    Parenthesed() : AtomExpr(SyntaxType::ParenExpr) {}
+
+    void                    setExpr(Expr* expr) { _parenthesedExpr = expr; }
+
+    Expr*                   getExpr() { return _parenthesedExpr; }
+
+    Type*                   getType() override { return _parenthesedExpr->getType(); }
+
+    unsigned                size() override { return _parenthesedExpr->size(); }
+
+private:
+    Expr*                   _parenthesedExpr;
+};
+
+class Keyword: public AtomExpr
+{
+public:
+    virtual void            accept(AstVisitor*) override;
+
+    std::string             getClassInfo() override { return "Keyword"; }
+
+    Keyword() : AtomExpr(SyntaxType::Keyword) {}
+
+    void                    setKeyword(const std::string kw) { _kw = kw; }
+
+    std::string             getKeyword() { return _kw; }
+
+    Type*                   getType() override { return nullptr; }
+
+    unsigned                size() override { return 0; }
+
+private:
+    std::string             _kw;
+};
+
 
 class UniOpExpr: public Expr
 {
@@ -640,7 +796,7 @@ public:
         BAD
     };
 
-    virtual void            accept(AstVisitor*);
+    virtual void            accept(AstVisitor*) override;
 
     std::string             getClassInfo() override { return "UniOpExpr"; }
 
@@ -648,16 +804,26 @@ public:
 
     virtual ~UniOpExpr();
 
-    void                    setType(UniOpType type) { _type = type; }
+    void                    setType(UniOpType type) { _opType = type; }
 
-    UniOpType               getUniType() { return _type; }
+    UniOpType               getUniType() { return _opType; }
 
-    void                    setFactor(Expr* factor) {_expr = factor;}
+    void                    setExpr(Expr* expr) {_expr = expr;}
 
-    Expr*                   getFactor() { return _expr; }
+    Expr*                   getExpr() { return _expr; }
+
+    bool                    isLhs() override; 
+
+    bool                    isAssignale() override; 
+
+    bool                    isLoadable() override; 
+
+    Type*                   getType() override;
+
+    unsigned                size() override { return getType()->size(); }
 
 private:
-    UniOpType               _type;
+    UniOpType               _opType;
 
     Expr*                   _expr;
 };
@@ -679,9 +845,6 @@ public:
         BITOR,
         BITAND,
         BITXOR,
-        MEMBER,
-            DOT,
-            POINTER,
         SHIFT,
             SHR,
             SHL,
@@ -695,13 +858,13 @@ public:
     };
 
 public:
-    virtual void            accept(AstVisitor*);
+    virtual void            accept(AstVisitor*) override;
 
     std::string             getClassInfo() override { return "BinOpExpr"; }
 
-    BinOpExpr(BinOpType type): Expr(SyntaxType::BinOpExpr), _type(type) {}
+    BinOpExpr(BinOpType type): Expr(SyntaxType::BinOpExpr), _opType(type) {}
 
-    BinOpExpr():Expr(SyntaxType::BinOpExpr), _type(BAD) {}
+    BinOpExpr():Expr(SyntaxType::BinOpExpr), _opType(BAD) {}
 
     virtual ~BinOpExpr();
 
@@ -713,16 +876,61 @@ public:
 
     Expr*                   getRhs() { return _right; }
 
-    void                    setBinType(BinOpType type) { _type = type; } 
+    void                    setBinType(BinOpType type) { _opType = type; } 
 
-    BinOpType               getBinType() { return _type; }
+    BinOpType               getBinType() { return _opType; }
+
+    Type*                   getType() override;
+
+    unsigned                size() override { return getType()->size(); }
 
 private:
-    BinOpType               _type;
+    BinOpType               _opType;
 
     Expr*                   _left;
 
     Expr*                   _right;
+};
+
+class MemberExpr : public Expr
+{
+public:
+    MemberExpr() : Expr(SyntaxType::MemberExpr) {}
+
+    virtual void            accept(AstVisitor*) override;
+
+    std::string             getClassInfo() override { return "Member Expr"; }
+
+    virtual ~MemberExpr();
+
+    void                    setExpr(Expr* expr) { _expr = expr;}
+
+    Expr*                   getExpr() { return _expr; }
+
+    void                    setMember(const std::string& member) { _member = member; }
+
+    std::string             getMember() { return _member; }
+
+    void                    setIsPointer(bool b) { _isPointer = b; }
+
+    bool                    isPointer() { return _isPointer; }
+
+    Type*                   getBasicType();
+
+    Type*                   getMemberType();
+
+    bool                    isLhs() override { return true; } 
+
+    Type*                   getType() override;
+
+    unsigned                size() override { return getType()->size(); }
+
+private:
+    Expr*                   _expr;
+
+    std::string             _member;
+
+    bool                    _isPointer;
 };
 
 /*
@@ -758,74 +966,30 @@ private:
 class TypeNode: public TreeNode
 {
 public:
-    enum class TypeId {
-        VOID,
-        BOOL,
-        CHAR,
-        SHORT,
-        INT,
-        FLOAT,
-        DOUBLE,
-        TypeRef,
+    virtual void            accept(AstVisitor*) override;
 
-        Ref,    // Type&
-        Pointer,// Type*
+    TypeNode() :TreeNode(SyntaxType::TypeNode) {}
 
-        EMPTY
-    };
+    TypeNode(Type* type) :TreeNode(SyntaxType::TypeNode), _type(type) {}
 
-public:
-    virtual void            accept(AstVisitor*);
+    TypeNode(TypeRef* ref) : TreeNode(SyntaxType::TypeNode), _typeRef(ref) {}
 
     std::string             getClassInfo() override { return "TypeNode"; }
 
-    virtual ~TypeNode() {if (_baseType) delete _baseType; }
+    bool                    isResolved(); 
 
-    TypeNode() : TreeNode(SyntaxType::TypeNode), _typeid(TypeId::EMPTY), _baseType(nullptr) ,_topConst(false), _lowConst(false) {};
+    void                    setType(Type* type) { _type = type; }
 
-    TypeNode(TypeId id) : TreeNode(SyntaxType::TypeNode), _typeid(id), _baseType(nullptr) ,_topConst(false), _lowConst(false) {};
+    Type*                   getType() { return _type; }
 
-    TypeNode(const TypeNode& node) : TreeNode(SyntaxType::TypeNode), _typeid(node._typeid), _baseType(node._baseType) {};
+    void                    setTypeRef(TypeRef* ref) { _typeRef = ref; }
 
-    void                    setType(TypeId type) { _typeid = type; }
-
-    void                    setBaseType(TypeNode* base) { _baseType = base; }
-
-    void                    setTypeRef(const std::string& ref) { _typeid = TypeId::TypeRef; _refName = ref; }
-
-    std::string             getTypeRefName() { return _refName; }
-
-    void                    setConst(bool top = false);
-
-    TypeId                  getTypeId();
-
-    bool                    isBasic() { return _baseType == nullptr; } 
-
-    bool                    isTopConst() { return _topConst; }
-
-    bool                    isLowConst() { return _lowConst; }
-
-    TypeNode*               getBasicType(bool resolveOnce = false);
-
-    TypeNode*               getReferedType(bool resolveOnce = false);
-
-    void                    resolvedType(StructDef* def) { _typeDef = def; }
-
-    StructDef*              getTypeDef() { return _typeDef; }
+    TypeRef*                getTypeRef() { return _typeRef; }
 
 protected:
-    TypeNode*               _baseType;
+    Type*                   _type;
 
-    // before type resolving, typenode only has a _refName
-    // after resolving, It has a pointer to the typeDef
-    std::string             _refName;
-    StructDef*              _typeDef;
-
-    TypeId                  _typeid;
-
-    bool                    _lowConst;
-
-    bool                    _topConst;
+    TypeRef*                _typeRef;
 };
 
 }

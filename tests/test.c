@@ -3,8 +3,9 @@
  #include <header.h>
 
 // test0： global var
-//int globalVar;
-
+int globalVar;
+int cond2 = 0;
+void printf(char* fmt, ...); 
 // test1： global func 
 void printInfo(const int& param)
 {
@@ -31,11 +32,16 @@ int main(const int argc, const char** argv)
     int localVar = 1;
     printInfo(localVar);
 
-    bool cond1 = true;
-    if (cond1 && cond2 == true) {
-        //
+    int cond1 = 1;
+    if (cond1 && cond2 == 1) {
+       cond1 = 2; 
     } else {
-        //
+       cond1 = 3; 
+    }
+
+    int a = 0;
+    for (int i = 0; i <= 10; ++i) {
+       a++; 
     }
 
     return 0;

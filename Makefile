@@ -1,43 +1,54 @@
-compile = g++ -g
-compileObj = g++ -g -c -o $@ $<
+PREFIX = .
+include setting.mk
 
-testLexer: ./tests/testLexer.cc myLexer.o utilMsg.o
-	$(compile) -o $@ $^
+# targets
+synObjs = $(DIR_SYN)/astDumper.o $(DIR_SYN)/astVisitor.o  $(DIR_SYN)/ast.o  $(DIR_SYN)/astScope.o $(DIR_SYN)/type.o $(DIR_SYN)/myParser.o
+irObjs = $(DIR_IR)/evaluator.o $(DIR_IR)/memRef.o $(DIR_IR)/label.o $(DIR_IR)/ir.o $(DIR_IR)/entity.o $(DIR_IR)/constEntry.o $(DIR_IR)/irScope.o $(DIR_IR)/irGenerator.o $(DIR_IR)/irVisitor.o $(DIR_IR)/irDumper.o $(DIR_IR)/literal.o
+asmObjs = $(DIR_ASM)/asm.o $(DIR_ASM)/asmGenerator.o $(DIR_ASM)/asmDumper.o $(DIR_ASM)/x86Reg.o $(DIR_ASM)/x86Generator.o $(DIR_ASM)/Imm.o
+semanObjs = $(DIR_SEM)/idResolver.o $(DIR_SEM)/typeResolver.o $(DIR_SEM)/typeChecker.o $(DIR_SEM)/miscSemantic.o $(DIR_SEM)/semanAnalyzer.o
+lexObjs = $(DIR_LEX)/myLexer.o
+utilObjs = $(DIR_UTL)/utilMsg.o
+preObjs = $(DIR_PRE)/myPProc.o
 
-testParser: ./tests/testParser.cc ./myParser/myParser.hh ./myParser/AstDumper.hh ./myLexer/lexPub.hh ./utils/Exception.hh \
-			myLexer.o myParser.o myPProc.o astDumper.o astVisitor.o utilMsg.o ast.o IdResolver.o TypeResolver.o scope.o
-	$(compile) -o $@ ./tests/testParser.cc myLexer.o myParser.o astDumper.o astVisitor.o utilMsg.o ast.o myPProc.o IdResolver.o TypeResolver.o scope.o 
+testAll: $(DIR_TEST)/testAll.cc $(DIR_SYN)/myParser.hh $(DIR_SYN)/AstDumper.hh $(DIR_LEX)/lexPub.hh $(DIR_UTL)/Exception.hh $(DIR_IR)/IRDumper.hh \
+			lexer parser preProcess semantic ir Asm utils 
+	$(compile) -o $@ $(DIR_TEST)/testAll.cc $(preObjs) $(irObjs) $(asmObjs) $(utilObjs) $(lexObjs) $(synObjs) $(semanObjs)
 
-utilMsg.o: ./utils/Msg.cc ./utils/Msg.hh
-	$(compileObj)
+testLexer: $(DIR_TEST)/testLexer.cc lexer utils 
+	$(compile) -o $@ $(DIR_TEST)/testLexer.cc $(DIR_LEX)/myLexer.o $(DIR_UTL)/utilMsg.o
 
-myLexer.o: ./myLexer/myLexer.cc ./myLexer/lexPub.hh ./utils/Fsm.hh ./utils/Msg.hh 
-	$(compileObj)
 
-myParser.o: ./myParser/myParser.cc ./myParser/astPub.hh ./myParser/myParser.hh
-	$(compileObj)
+.PHONY: lexer
+lexer:
+	make -C $(DIR_LEX)
 
-myPProc.o: ./myPreProc/myPreProc.cc ./myPreProc/myPreProc.hh ./myLexer/lexPub.hh ./myParser/astPub.hh ./myParser/myParser.hh
-	$(compileObj)
+.PHONY: parser 
+parser:
+	make -C $(DIR_SYN)
 
-IdResolver.o : ./mySemantic/IdResolver.cc ./mySemantic/IdResolver.hh ./myParser/astPub.hh ./myParser/AstVisitor.hh
-	$(compileObj)
+.PHONY: semantic 
+semantic:
+	make -C $(DIR_SEM)
 
-TypeResolver.o : ./mySemantic/typeResolver.cc ./mySemantic/typeResolver.hh ./myParser/AstVisitor.hh ./utils/Exception.hh
-	$(compileObj)
+.PHONY: preProcess
+preProcess:
+	make -C $(DIR_PRE)
 
-ast.o: ./myParser/ast.cc ./myParser/astPub.hh 
-	$(compileObj)
+.PHONY: ir
+ir:
+	make -C $(DIR_IR)
 
-scope.o : ./myParser/Scope.cc ./myParser/Scope.hh
-	$(compileObj)
+.PHONY:Asm
+Asm:
+	make -C $(DIR_ASM)
 
-astDumper.o: ./myParser/AstDumper.cc ./myParser/AstDumper.hh ./myParser/AstVisitor.hh 
-	$(compileObj)
-
-astVisitor.o: ./myParser/AstVisitor.cc ./myParser/AstVisitor.hh ./myParser/astPub.hh
-	$(compileObj)
+.PHONY: utils
+utils:
+	make -C $(DIR_UTL)
 
 .PHONY:clean
 clean:
-	rm *.o
+	for dir in $(DIR_LEX) $(DIR_SYN) $(DIR_SEM) $(DIR_PRE) $(DIR_IR) $(DIR_ASM) $(DIR_UTL); do \
+		make -C $$dir clean; \
+	done
+	rm -rf testAll testLexer
